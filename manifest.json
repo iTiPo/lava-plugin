@@ -1,0 +1,9 @@
+{
+	"id": "lava-plugin",
+	"name": "Lava",
+	"version": "1.0.0",
+	"minAppVersion": "1.11.4",
+	"description": "An AI assistant that powers your thinking and noting process by chatting with AI models directly inside Obsidian.",
+	"author": "Lava",
+	"isDesktopOnly": true
+}

@@ -1,0 +1,172 @@
+# Plugin
+
+The plugin is an Obsidian community plugin that provides an AI assistant inside the vault: chat with models, mention notes in conversations, and use agent tools against vault content. Sources live in `src/`, compile with esbuild, and load as `main.js` in the vault plugin folder.
+
+## Requirements
+
+- Node.js 18+ and npm.
+- Obsidian 1.11.4 or newer (`minAppVersion` in `manifest.json`).
+- For the Dev Container workflow: a bind-mounted vault at `/vault` (see `.devcontainer/devcontainer.json`).
+
+## Setup
+
+```bash
+cd plugin
+npm ci
+```
+
+Copy `.env.example` to `.env` and set `LAVA_SUPABASE_URL`, `LAVA_SUPABASE_ANON_KEY`, and `LAVA_API_BASE_URL`. Esbuild inlines these at build time into `main.js` (not stored in the vault).
+
+If you develop inside the Dev Container, copy static plugin files into the mounted vault once:
+
+```bash
+npm run copy
+```
+
+## Develop
+
+```bash
+cd plugin
+npm run dev
+```
+
+`npm run dev` runs esbuild in watch mode. In the Dev Container, rebuilds write directly to `/vault/.obsidian/plugins/lava-plugin/main.js`. Reload Obsidian (or disable and re-enable the plugin) to pick up changes.
+
+For a one-off production bundle:
+
+```bash
+npm run build
+```
+
+### Manual install
+
+Copy `main.js`, `manifest.json`, and `styles.css` into your vault at:
+
+```
+<Vault>/.obsidian/plugins/lava-plugin/
+```
+
+Then reload Obsidian and enable **Lava** under **Settings → Community plugins**.
+
+## Validate
+
+```bash
+cd plugin
+npm ci
+npm run build
+npm run lint
+```
+
+This runs TypeScript checking, the production esbuild bundle, ESLint, and `svelte-check`.
+
+### Auth (Supabase)
+
+Before end-to-end auth testing:
+
+1. In Supabase **Auth → URL Configuration**, add `obsidian://lava-plugin-auth-callback` to **Additional Redirect URLs** if you still use redirect-based Auth flows elsewhere.
+2. Disable Supabase Auth's built-in email sending (no-op Send Email Hook or equivalent). The Lava backend generates the magic-link token and emails an https handoff link via Resend.
+3. Copy `backend/.env.example` to `backend/.env` and set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `MAGIC_LINK_BASE_URL`, and the other required backend vars.
+4. Start the backend (`cd backend && npm run dev`) so auth and chat requests hit `http://localhost:3000/v1`.
+5. The plugin requests `POST /v1/auth/magic-link` with `{ email }`. The emailed link is `{MAGIC_LINK_BASE_URL}?token_hash=…&type=magiclink` (e.g. `https://getlava.me/auth/obsidian?…`), which opens `obsidian://lava-plugin-auth-callback?…`; the plugin completes with `verifyOtp`.
+
+Manual E2E: request a magic link → open the email link in Obsidian → send a chat message → confirm 401 banner + **Sign in** appears when the token is missing or invalid.
+
+## Development notes
+
+Guidelines for working on the Obsidian plugin during development.
+
+### Project structure
+
+- Entry point: `src/main.ts` compiles to `main.js` and is loaded by Obsidian.
+- Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands). Delegate feature logic to modules under `src/`.
+- Organize code across multiple files. Example layout:
+
+  ```
+  src/
+    main.ts           # Plugin entry point, lifecycle management
+    settings.ts       # Settings interface and defaults
+    ai/               # Model providers, agents, tools
+    chat/             # Session storage and persistence
+    notes/            # Vault note helpers
+    ui/               # Views and Svelte components
+  ```
+
+- Bundle everything into `main.js` with esbuild. Do not commit `node_modules/`, `main.js`, or other generated files.
+- Prefer browser-compatible packages. Avoid large dependencies.
+- Use TypeScript with `"strict": true`. Prefer `async/await` over promise chains.
+
+### Manifest (`manifest.json`)
+
+Required fields include `id`, `name`, `version` (SemVer), `minAppVersion`, `description`, and `isDesktopOnly`. Optional: `author`, `authorUrl`, `fundingUrl`.
+
+- Never change `id` after release. Treat it as stable API.
+- Keep `minAppVersion` accurate when using newer Obsidian APIs.
+- Canonical release requirements: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-plugin-entry.yml
+
+### Commands, settings, and listeners
+
+- Add user-facing commands with `this.addCommand(...)`. Use stable command IDs; do not rename them after release.
+- If the plugin has configuration, provide a settings tab and sensible defaults.
+- Persist settings with `this.loadData()` / `this.saveData()`.
+- Register and clean up listeners with `register*` helpers so reload/unload does not leak:
+
+  ```ts
+  this.registerEvent(
+    this.app.workspace.on('file-open', (f) => {
+      /* ... */
+    }),
+  );
+  this.registerDomEvent(activeWindow, 'resize', () => {
+    /* ... */
+  });
+  this.registerInterval(
+    window.setInterval(() => {
+      /* ... */
+    }, 1000),
+  );
+  ```
+
+### Security and privacy
+
+Follow Obsidian [developer policies](https://docs.obsidian.md/Developer+policies) and [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
+
+- Default to local/offline operation. Only make network requests when essential to the feature.
+- No hidden telemetry. Disclose external services, data sent, and risks in settings and documentation.
+- Chat messages and note content explicitly included in a conversation are sent to the Lava backend for inference. The backend exposes the model as `lava-chat` and requires OpenRouter endpoints with Zero Data Retention, no provider data collection, and FP8 inference; requests are still processed transiently by those services.
+- Never execute remote code, fetch and eval scripts, or auto-update plugin code outside normal releases.
+- Read and write only what is necessary inside the vault. Do not access files outside the vault.
+- Do not collect vault contents, filenames, or personal information unless essential and explicitly consented.
+
+### UX copy
+
+- Prefer sentence case for headings, buttons, and titles.
+- Use clear, action-oriented imperatives in step-by-step copy.
+- Use **bold** for literal UI labels. Prefer "select" for interactions.
+- Use arrow notation for navigation: **Settings → Community plugins**.
+- Keep in-app strings short, consistent, and free of jargon.
+
+### Performance
+
+- Keep startup light. Defer heavy work until needed.
+- Avoid long-running tasks during `onload`; use lazy initialization.
+- Batch disk access and avoid excessive vault scans.
+- Debounce or throttle expensive operations in response to file system events.
+
+### Mobile
+
+- `isDesktopOnly` is `true` for this plugin because it uses desktop-oriented AI and UI APIs.
+- Where feasible on other plugins, test on iOS and Android. Avoid Node/Electron APIs if mobile compatibility is required.
+
+### Troubleshooting
+
+- Plugin does not load after build: ensure `main.js` and `manifest.json` are at the top level of `<Vault>/.obsidian/plugins/lava-plugin/`.
+- Build issues: if `main.js` is missing, run `npm run build` or `npm run dev`.
+- Commands not appearing: verify `addCommand` runs during `onload` and IDs are unique.
+- Settings not persisting: ensure `loadData` / `saveData` are awaited and the settings UI re-renders after changes.
+
+## Notes
+
+- Release artifacts are `manifest.json`, `main.js`, and `styles.css`. Bump `version` in `manifest.json`, update `versions.json`, and create a GitHub release whose tag matches the version exactly (no `v` prefix).
+- You can bump versions with `npm version patch`, `npm version minor`, or `npm version major` after updating `minAppVersion` in `manifest.json`.
+- ESLint uses `eslint-plugin-obsidianmd`. A GitHub Action lints every commit on all branches.
+- Obsidian API reference: https://docs.obsidian.md

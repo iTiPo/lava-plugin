@@ -1,0 +1,1365 @@
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+/* Lava chat view */
+
+.lava-chat-host {
+    height: 100%;
+}
+
+/* Multi-chat shell */
+
+.lava-chat-shell {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+}
+
+.lava-chat-shell__main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+.lava-chat-thread-list {
+    flex: 0 0 12.5rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+}
+
+.lava-chat-thread-list__toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.65rem 0.65rem 0.35rem;
+}
+
+.lava-chat-thread-list__label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-accent);
+}
+
+.lava-chat-thread-list__label-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background-color: var(--interactive-accent);
+}
+
+.lava-chat-thread-list__new {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0 0.5rem 0.45rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 0.4rem;
+    border: none;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    text-align: center;
+}
+
+.lava-chat-thread-list__new-icon {
+    display: inline-flex;
+    --icon-size: var(--icon-xs);
+}
+
+.lava-chat-thread-list__new:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
+.lava-chat-thread-list__profile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border-radius: 0.45rem;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+    cursor: pointer;
+    --icon-size: var(--icon-s);
+}
+
+.lava-chat-thread-list__profile:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-chat-thread-list__items {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 0.15rem 0.45rem 0.65rem;
+    min-height: 0;
+}
+
+.lava-chat-thread-list__empty {
+    margin: 0 0.5rem 0.65rem;
+    padding: 0 0.25rem;
+    font-size: var(--font-ui-smaller);
+    line-height: 1.45;
+    color: var(--text-muted);
+}
+
+.lava-chat-thread-list__item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.35rem;
+    border-radius: 0.35rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-normal);
+}
+
+.lava-chat-thread-list__item:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.lava-chat-thread-list__item--active {
+    color: var(--text-accent);
+}
+
+.lava-chat-thread-list__item--active:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-chat-thread-list__item-indicator {
+    flex: 0 0 auto;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 50%;
+    background-color: transparent;
+}
+
+.lava-chat-thread-list__item--active .lava-chat-thread-list__item-indicator {
+    background-color: var(--interactive-accent);
+}
+
+.lava-chat-thread-list__item-title {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lava-chat-thread-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.55rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+    position: relative;
+}
+
+.lava-chat-thread-header__title {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.65rem;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: var(--font-ui-small);
+    text-align: left;
+}
+
+.lava-chat-thread-header__title:hover,
+.lava-chat-thread-header__title--open {
+    border-color: color-mix(in srgb, var(--interactive-accent) 35%, var(--background-modifier-border));
+    background-color: color-mix(in srgb, var(--interactive-accent) 6%, var(--background-modifier-form-field));
+}
+
+.lava-chat-thread-header__title-text {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: var(--font-medium);
+}
+
+.lava-chat-thread-header__chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+    --icon-size: var(--icon-xs);
+}
+
+.lava-chat-thread-header__title--open .lava-chat-thread-header__chevron {
+    transform: rotate(180deg);
+    color: var(--text-accent);
+}
+
+.lava-chat-thread-header__new {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border-radius: 0.4rem;
+    border: none;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    --icon-size: var(--icon-s);
+}
+
+.lava-chat-thread-header__new:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
+.lava-chat-thread-header__profile {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border-radius: 0.45rem;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+    cursor: pointer;
+    --icon-size: var(--icon-s);
+}
+
+.lava-chat-thread-header__profile:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-chat-thread-header__dropdown {
+    position: absolute;
+    top: calc(100% - 0.1rem);
+    left: 0.55rem;
+    right: 0.55rem;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.55rem;
+    border-radius: 0.85rem;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    box-shadow: var(--shadow-s);
+}
+
+.lava-chat-thread-header__dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.1rem 0.15rem 0.25rem;
+}
+
+.lava-chat-thread-header__dropdown-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-accent);
+}
+
+.lava-chat-thread-header__dropdown-dot {
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 50%;
+    background-color: var(--interactive-accent);
+}
+
+.lava-chat-thread-header__dropdown-new {
+    flex-shrink: 0;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--background-modifier-border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-normal);
+    cursor: pointer;
+}
+
+.lava-chat-thread-header__dropdown-new:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.lava-chat-thread-header__dropdown-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+.lava-chat-thread-header__dropdown-empty {
+    margin: 0.15rem 0.35rem 0.25rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+.lava-chat-thread-header__dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.35rem;
+    border-radius: 0.35rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-normal);
+}
+
+.lava-chat-thread-header__dropdown-item:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.lava-chat-thread-header__dropdown-item--active {
+    color: var(--text-accent);
+}
+
+.lava-chat-thread-header__dropdown-item--active:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-chat-thread-header__dropdown-indicator {
+    flex: 0 0 auto;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 50%;
+    background-color: transparent;
+}
+
+.lava-chat-thread-header__dropdown-item--active .lava-chat-thread-header__dropdown-indicator {
+    background-color: var(--interactive-accent);
+}
+
+.lava-chat-thread-header__dropdown-item-title {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lava-chat-shell__main > .lava-chat {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.lava-chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.lava-chat__messages {
+    --no-tooltip: true;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 0;
+}
+
+.lava-chat__message {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    max-width: 85%;
+}
+
+.lava-chat__message--user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.lava-chat__message--assistant,
+.lava-chat__message--system {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.lava-chat__role {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.lava-chat__bubble {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.6rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.4;
+    user-select: text;
+}
+
+.lava-chat__message--user .lava-chat__bubble {
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+}
+
+.lava-chat__message--user .lava-chat__bubble::selection {
+    background-color: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+
+.lava-chat__note-mention {
+    color: var(--text-accent);
+}
+
+.lava-chat__message--assistant .lava-chat__bubble,
+.lava-chat__message--system .lava-chat__bubble {
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+}
+
+.lava-chat__bubble--markdown {
+    white-space: normal;
+}
+
+.lava-chat__bubble--markdown > :first-child {
+    margin-top: 0;
+}
+
+.lava-chat__bubble--markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.lava-chat__bubble--markdown p,
+.lava-chat__bubble--markdown ul,
+.lava-chat__bubble--markdown ol,
+.lava-chat__bubble--markdown blockquote,
+.lava-chat__bubble--markdown pre,
+.lava-chat__bubble--markdown table {
+    margin: 0.4em 0;
+}
+
+.lava-chat__bubble--markdown h1,
+.lava-chat__bubble--markdown h2,
+.lava-chat__bubble--markdown h3,
+.lava-chat__bubble--markdown h4,
+.lava-chat__bubble--markdown h5,
+.lava-chat__bubble--markdown h6 {
+    margin: 0.5em 0 0.25em;
+    font-weight: var(--font-semibold);
+    line-height: 1.3;
+}
+
+.lava-chat__bubble--markdown h1 {
+    font-size: 1.15em;
+}
+
+.lava-chat__bubble--markdown h2 {
+    font-size: 1.1em;
+}
+
+.lava-chat__bubble--markdown h3,
+.lava-chat__bubble--markdown h4,
+.lava-chat__bubble--markdown h5,
+.lava-chat__bubble--markdown h6 {
+    font-size: 1em;
+}
+
+.lava-chat__bubble--markdown ul,
+.lava-chat__bubble--markdown ol {
+    padding-left: 1.25em;
+}
+
+.lava-chat__bubble--markdown blockquote {
+    padding-left: 0.75em;
+    border-left: 3px solid var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+.lava-chat__bubble--markdown a {
+    color: var(--text-accent);
+}
+
+.lava-chat__bubble--markdown code {
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+    background-color: var(--code-background);
+    padding: 0.1em 0.3em;
+    border-radius: 0.2em;
+}
+
+.lava-chat__bubble--markdown pre {
+    overflow-x: auto;
+    padding: 0.5em 0.6em;
+    border-radius: 0.4em;
+    background-color: var(--code-background);
+}
+
+.lava-chat__bubble--markdown pre code {
+    padding: 0;
+    background: none;
+}
+
+.lava-chat__bubble--markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-chat__bubble--markdown th,
+.lava-chat__bubble--markdown td {
+    border: 1px solid var(--background-modifier-border);
+    padding: 0.25em 0.5em;
+}
+
+.lava-chat__empty {
+    margin: auto;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+}
+
+.lava-chat__empty-title {
+    font-size: var(--font-ui-larger);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+}
+
+.lava-chat__empty-subtitle {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+}
+
+.lava-chat__suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+}
+
+.lava-chat__suggestion {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.4rem;
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+    cursor: pointer;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.lava-chat__suggestion:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-chat__error {
+    margin: 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.4rem;
+    background-color: var(--background-modifier-error);
+    color: var(--text-on-accent);
+    font-size: var(--font-ui-small);
+}
+
+.lava-chat__error--auth {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.lava-chat__error-action {
+    border: none;
+    border-radius: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    background-color: var(--text-on-accent);
+    color: var(--background-modifier-error);
+    font-size: var(--font-ui-small);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.lava-chat__error-action:hover {
+    opacity: 0.9;
+}
+
+.lava-chat__input-area {
+    flex: 0 0 auto;
+    padding: 0.75rem;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.lava-chat__signin-prompt {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.9rem 0.75rem;
+    border-top: 1px solid var(--background-modifier-border);
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
+
+.lava-chat__signin-link {
+    color: var(--text-accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.12em;
+    cursor: pointer;
+}
+
+.lava-chat__signin-link:hover {
+    color: var(--text-accent-hover, var(--text-accent));
+}
+
+.lava-chat__input {
+    --no-tooltip: true;
+    display: block;
+    box-sizing: border-box;
+    field-sizing: content;
+    resize: none;
+    width: 100%;
+    min-height: 3.5rem;
+    max-height: 12rem;
+    overflow-y: auto;
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-small);
+    line-height: 1.4;
+    padding: 0.5rem 2.75rem 2.75rem 0.6rem;
+    border: none;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--text-normal);
+    position: relative;
+    z-index: 1;
+}
+
+.lava-chat__input:focus {
+    outline: none;
+}
+
+.lava-chat__input-wrapper {
+    position: relative;
+    isolation: isolate;
+    box-sizing: border-box;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0.4rem;
+    background-color: var(--background-modifier-form-field);
+}
+
+.lava-chat__input-wrapper:focus-within {
+    border-color: var(--interactive-accent);
+}
+
+.lava-chat__input-backdrop {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 0.5rem 2.75rem 2.75rem 0.6rem;
+    color: var(--text-normal);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-small);
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.lava-chat__input-backdrop-content {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.lava-chat__actions {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 3;
+}
+
+.lava-chat__send,
+.lava-chat__stop {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    --icon-size: var(--icon-s);
+}
+
+.lava-chat__actions .lava-chat__send,
+.lava-chat__actions .lava-chat__stop {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.lava-chat__send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lava-chat__send:hover:not(:disabled),
+.lava-chat__stop:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
+.lava-chat__tool-status {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.lava-chat__work {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    width: 100%;
+}
+
+.lava-chat__work-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 1.25rem;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-chat__work-indicator {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--interactive-accent);
+    animation: lava-chat-pulse 1.2s ease-in-out infinite;
+}
+
+.lava-chat__reasoning {
+    width: 100%;
+    max-width: 34rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0.4rem;
+    background-color: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-chat__reasoning summary {
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-weight: var(--font-medium);
+}
+
+.lava-chat__reasoning-text {
+    padding: 0 0.6rem 0.5rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.4;
+    user-select: text;
+}
+
+.lava-chat__streaming-cursor {
+    display: inline-block;
+    width: 0.45em;
+    height: 1em;
+    margin-left: 0.12em;
+    vertical-align: -0.12em;
+    background-color: currentcolor;
+    animation: lava-chat-blink 1s step-end infinite;
+}
+
+.lava-chat__work-error {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.4rem;
+    background-color: var(--background-modifier-error);
+    color: var(--text-on-accent);
+    font-size: var(--font-ui-small);
+}
+
+.lava-chat__work-retry {
+    border: 1px solid color-mix(in srgb, var(--text-on-accent) 65%, transparent);
+    border-radius: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    background: transparent;
+    color: var(--text-on-accent);
+    font-size: inherit;
+    cursor: pointer;
+}
+
+.lava-chat__work-retry:hover {
+    background-color: color-mix(in srgb, var(--text-on-accent) 14%, transparent);
+}
+
+@keyframes lava-chat-pulse {
+    50% {
+        opacity: 0.35;
+    }
+}
+
+@keyframes lava-chat-blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lava-chat__work-indicator,
+    .lava-chat__streaming-cursor,
+    .lava-chat-thread-header__chevron {
+        animation: none;
+        transition: none;
+    }
+}
+
+.lava-mention-suggest__name {
+    font-size: var(--font-ui-small);
+}
+
+.lava-mention-suggest__path {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+/* Auth screens */
+
+.lava-mark {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 0.625rem;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.lava-mark__letter {
+    font-family: var(--font-interface);
+    font-size: 1.35rem;
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+.lava-auth {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background-color: var(--background-primary);
+}
+
+.lava-auth--with-topbar {
+    padding: 0;
+}
+
+.lava-auth__stage {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.5rem 1rem 2rem;
+}
+
+.lava-auth__orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.lava-auth__orb--primary {
+    top: 0.75rem;
+    right: 8%;
+    width: 7.5rem;
+    height: 7.5rem;
+    border: 1px solid color-mix(in srgb, var(--interactive-accent) 22%, transparent);
+}
+
+.lava-auth__orb--secondary {
+    top: 2.25rem;
+    right: 11%;
+    width: 5.5rem;
+    height: 5.5rem;
+    border: 1px solid color-mix(in srgb, var(--text-accent) 18%, transparent);
+}
+
+.lava-auth__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 24rem;
+    gap: 1.5rem;
+}
+
+.lava-auth__header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.lava-auth__brand-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.lava-auth__brand-name {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-medium);
+    letter-spacing: -0.04em;
+    color: var(--text-normal);
+}
+
+.lava-auth__brand-badge {
+    flex-shrink: 0;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+.lava-auth__hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.lava-auth__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-accent);
+}
+
+.lava-auth__eyebrow-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background-color: var(--interactive-accent);
+}
+
+.lava-auth__headline {
+    margin: 0;
+    font-size: clamp(1.85rem, 5vw, 2.35rem);
+    font-weight: var(--font-normal);
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    color: var(--text-normal);
+}
+
+.lava-auth__headline em {
+    font-style: italic;
+    color: var(--interactive-accent);
+}
+
+.lava-auth__lede {
+    margin: 0;
+    max-width: 22rem;
+    font-size: var(--font-ui-small);
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+
+.lava-auth__card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    border: 1px solid var(--background-modifier-border);
+    background:
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary)) 0%,
+            var(--background-secondary) 4.5rem
+        );
+    box-shadow: var(--shadow-s);
+}
+
+.lava-auth__card--message {
+    align-items: flex-start;
+    text-align: left;
+    background: var(--background-secondary);
+}
+
+.lava-auth__card-label {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-accent);
+}
+
+.lava-auth__card-title {
+    margin: 0;
+    font-size: var(--font-ui-larger);
+    font-weight: var(--font-semibold);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--text-normal);
+}
+
+.lava-auth__card-copy {
+    margin: 0;
+    font-size: var(--font-ui-small);
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.lava-auth__card-copy strong {
+    color: var(--text-normal);
+    font-weight: var(--font-semibold);
+}
+
+.lava-auth__message-icon {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-bold);
+}
+
+.lava-auth__form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 22.5rem;
+}
+
+.lava-auth__fields {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+}
+
+.lava-auth__label {
+    margin-top: 0.35rem;
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+}
+
+.lava-auth__input {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+}
+
+.lava-auth__input::placeholder {
+    color: var(--text-faint);
+}
+
+.lava-auth__input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.lava-auth__error {
+    margin: 0;
+    padding: 0.45rem 0.55rem;
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--text-error) 35%, transparent);
+    background-color: color-mix(in srgb, var(--background-modifier-error) 18%, transparent);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.45;
+    color: var(--text-error);
+}
+
+.lava-auth__button {
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 999px;
+    border: none;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    cursor: pointer;
+}
+
+.lava-auth__button:hover:not(:disabled) {
+    background-color: var(--interactive-accent-hover);
+}
+
+.lava-auth__button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lava-auth__hint {
+    margin: 0.15rem 0 0;
+    text-align: center;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+
+.lava-auth__legal {
+    margin: 0;
+    font-size: var(--font-ui-smaller);
+    line-height: 1.5;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.lava-auth__legal-link {
+    color: var(--text-accent);
+    font-weight: var(--font-semibold);
+    text-decoration: underline;
+    text-underline-offset: 0.14em;
+    cursor: pointer;
+}
+
+.lava-auth__legal-link:hover {
+    color: var(--text-accent-hover, var(--text-accent));
+}
+
+.lava-auth__topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--background-secondary);
+}
+
+.lava-auth__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.35rem;
+    border: none;
+    background: transparent;
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+}
+
+.lava-auth__back-icon {
+    display: inline-flex;
+    --icon-size: var(--icon-xs);
+}
+
+.lava-auth__back:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+/* Account / profile */
+
+.lava-profile {
+    gap: 0.75rem;
+}
+
+.lava-profile__card {
+    gap: 0;
+}
+
+.lava-profile__section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+}
+
+.lava-profile__email {
+    margin: 0;
+    padding: 0.55rem 0.65rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary-alt, var(--background-secondary));
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+.lava-profile__usage-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.lava-profile__usage-value {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.lava-profile__meter {
+    width: 100%;
+    height: 0.45rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background-color: var(--background-modifier-border);
+}
+
+.lava-profile__meter-fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background-color: var(--interactive-accent);
+    transition: width 0.25s ease;
+}
+
+.lava-profile__meter--loading {
+    position: relative;
+}
+
+.lava-profile__meter--loading .lava-profile__meter-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    opacity: 0.55;
+    animation: lava-profile-meter-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes lava-profile-meter-pulse {
+    0% {
+        left: -40%;
+        opacity: 0.35;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+
+    100% {
+        left: 100%;
+        opacity: 0.35;
+    }
+}
+
+.lava-profile__hint {
+    margin: 0;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+.lava-profile__retry {
+    align-self: flex-start;
+    margin-top: 0.15rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--background-modifier-border);
+    background: transparent;
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+}
+
+.lava-profile__retry:hover:not(:disabled) {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-profile__retry:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lava-profile__sign-out {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--background-modifier-border);
+    background: transparent;
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+}
+
+.lava-profile__sign-out:hover:not(:disabled) {
+    background-color: var(--background-modifier-hover);
+}
+
+.lava-profile__sign-out:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

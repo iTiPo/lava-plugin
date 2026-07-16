@@ -1,0 +1,41 @@
+import type { LavaUIMessage } from '../ai/chat-types';
+
+export const CHAT_INDEX_VERSION = 1;
+
+export interface ChatSessionMeta {
+    id: string;
+    title: string;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface ChatIndex {
+    version: typeof CHAT_INDEX_VERSION;
+    activeSessionId: string;
+    sessions: ChatSessionMeta[];
+}
+
+export interface ChatSession extends ChatSessionMeta {
+    messages: LavaUIMessage[];
+    messagesLoaded: boolean;
+    persisted: boolean;
+}
+
+export const DEFAULT_SESSION_TITLE = 'New chat';
+
+export const TITLE_MAX_LENGTH = 40;
+
+export function titleFromFirstMessage(text: string): string {
+    const trimmed = text.trim();
+    if (!trimmed) return DEFAULT_SESSION_TITLE;
+    if (trimmed.length <= TITLE_MAX_LENGTH) return trimmed;
+    return `${trimmed.slice(0, TITLE_MAX_LENGTH - 1)}…`;
+}
+
+export function createEmptyChatIndex(): ChatIndex {
+    return {
+        version: CHAT_INDEX_VERSION,
+        activeSessionId: '',
+        sessions: [],
+    };
+}

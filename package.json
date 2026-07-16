@@ -1,0 +1,42 @@
+{
+    "name": "obsidian-sample-plugin",
+    "version": "1.0.0",
+    "description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+    "main": "main.js",
+    "type": "module",
+    "scripts": {
+        "dev": "node esbuild.config.mjs",
+        "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+        "copy": "mkdir -p /vault/.obsidian/plugins/lava-plugin && cp manifest.json styles.css /vault/.obsidian/plugins/lava-plugin/",
+        "version": "node version-bump.mjs && git add manifest.json versions.json",
+        "lint": "eslint . && svelte-check --tsconfig tsconfig.json"
+    },
+    "keywords": [],
+    "license": "0-BSD",
+    "dependencies": {
+        "@supabase/supabase-js": "^2.49.8",
+        "@ai-sdk/openai-compatible": "^3.0.5",
+        "@ai-sdk/svelte": "^5.0.14",
+        "ai": "^7.0.14",
+        "dompurify": "^3.4.11",
+        "marked": "^18.0.5",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.4",
+        "@types/node": "^22.15.17",
+        "dotenv": "^17.4.2",
+        "esbuild": "0.25.5",
+        "esbuild-svelte": "^0.9.5",
+        "eslint": "^9.39.4",
+        "eslint-plugin-obsidianmd": "^0.4.0",
+        "globals": "^17.6.0",
+        "jiti": "^2.6.1",
+        "obsidian": "latest",
+        "svelte": "^5.56.4",
+        "svelte-check": "^4.7.1",
+        "svelte-preprocess": "^6.0.5",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.59.1"
+    }
+}

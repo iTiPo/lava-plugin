@@ -27,12 +27,12 @@ Lava needs a network connection to the Lava service for sign-in and chat.
 
 - Chat messages and note content that you explicitly include in a conversation (for example via `@` mentions) are sent to the Lava backend for inference.
 - The plugin does not silently upload your whole vault.
-- See [Terms](https://getlava.me/terms) and [Privacy](https://getlava.me/confidential) for full details.
+- See [Terms of Use](https://getlava.me/terms) and [Privacy Policy](https://getlava.me/confidential) for full details.
 
 ## Support
 
 - Issues and feature requests: use this repository’s issue tracker.
-- Website: [getlava.me](https://getlava.me)
+- Contact: [getlava.me/contact](https://getlava.me/contact)
 
 ## License
 

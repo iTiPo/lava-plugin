@@ -1,6 +1,6 @@
 # Contributing
 
-This is the shared handbook for **human and AI** contributors. Product overview for end users lives in [README.md](README.md). AI coding agents should also read [AGENTS.md](AGENTS.md) for agent-only rules.
+This is the handbook for developing this plugin. Product overview for end users lives in [README.md](README.md). AI coding agents should also read [AGENTS.md](AGENTS.md) for agent-only rules.
 
 ## Requirements
 

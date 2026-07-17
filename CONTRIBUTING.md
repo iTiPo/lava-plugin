@@ -57,12 +57,11 @@ Then reload Obsidian and enable **Lava** under **Settings → Community plugins*
 ## Validate
 
 ```bash
-npm ci
 npm run build
 npm run lint
 ```
 
-This runs TypeScript checking, the production esbuild bundle, ESLint, and `svelte-check`.
+This runs checks.
 
 ### Auth and local end-to-end testing
 

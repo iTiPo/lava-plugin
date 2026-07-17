@@ -16,13 +16,7 @@ From the repository root:
 npm ci
 ```
 
-Copy `.env.example` to `.env` and set `LAVA_SUPABASE_URL`, `LAVA_SUPABASE_ANON_KEY`, and `LAVA_API_BASE_URL`. Esbuild inlines these at build time into `main.js` (they are not stored in the vault).
-
-If you develop inside the Dev Container, copy static plugin files into the mounted vault once:
-
-```bash
-npm run copy
-```
+Copy `.env.example` to `.env` and fill in the values it defines.
 
 ## Develop
 
@@ -37,6 +31,14 @@ For a one-off production bundle:
 ```bash
 npm run build
 ```
+
+When you are ready to test the build in Obsidian, copy the required plugin files into the vault plugin directory:
+
+```bash
+npm run copy
+```
+
+In the Dev Container this targets `/vault/.obsidian/plugins/lava-plugin/`.
 
 ### Manual install
 

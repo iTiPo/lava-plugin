@@ -71,5 +71,3 @@ Obsidian plugin structure, conventions, security, UX, performance, and troublesh
 
 - Release artifacts are `manifest.json`, `main.js`, and `styles.css`. Bump `version` in `manifest.json`, update `versions.json`, and create a GitHub release whose tag matches the version exactly (no `v` prefix).
 - You can bump versions with `npm version patch`, `npm version minor`, or `npm version major` after updating `minAppVersion` in `manifest.json` when needed.
-- ESLint uses `eslint-plugin-obsidianmd`. CI workflows under [`.github/workflows`](.github/workflows) lint and release the plugin.
-- Obsidian API reference: https://docs.obsidian.md

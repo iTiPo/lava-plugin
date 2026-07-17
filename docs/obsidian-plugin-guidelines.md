@@ -2,6 +2,8 @@
 
 Guidelines for working on this Obsidian plugin.
 
+Obsidian API reference: https://docs.obsidian.md
+
 ## Project structure
 
 - Entry point: `src/main.ts` compiles to `main.js` and is loaded by Obsidian.

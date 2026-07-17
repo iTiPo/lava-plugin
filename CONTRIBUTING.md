@@ -10,7 +10,7 @@ This is the handbook for developing this plugin. Product overview for end users 
 
 ## Setup
 
-From the repository root:
+From the repository root, install dependencies:
 
 ```bash
 npm ci

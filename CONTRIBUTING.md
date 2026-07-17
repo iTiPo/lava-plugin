@@ -65,7 +65,7 @@ npm run lint
 
 ## Development guidelines
 
-Obsidian plugin structure, conventions, security, UX, performance, and troubleshooting live in [docs/obsidian-plugin-guidelines.md](docs/obsidian-plugin-guidelines.md).
+Obsidian plugin conventions, security, UX, performance, and troubleshooting live in [docs/obsidian-plugin-guidelines.md](docs/obsidian-plugin-guidelines.md).
 
 ## Release
 

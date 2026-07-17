@@ -4,27 +4,6 @@ Guidelines for working on this Obsidian plugin.
 
 Obsidian API reference: https://docs.obsidian.md
 
-## Project structure
-
-- Entry point: `src/main.ts` compiles to `main.js` and is loaded by Obsidian.
-- Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands). Delegate feature logic to modules under `src/`.
-- Organize code across multiple files. Layout:
-
-  ```
-  src/
-    main.ts           # Plugin entry point, lifecycle management
-    config.ts         # Build-time config (API base URL, etc.)
-    ai/               # Model providers, agents, tools
-    auth/             # Supabase auth store and client
-    chat/             # Session storage and persistence
-    notes/            # @mention parsing and suggest
-    ui/               # Views and Svelte components
-  ```
-
-- Bundle everything into `main.js` with esbuild. Do not commit `node_modules/`, `main.js`, or other generated files.
-- Prefer browser-compatible packages. Avoid large dependencies.
-- Use TypeScript with `"strict": true`. Prefer `async/await` over promise chains.
-
 ## Manifest (`manifest.json`)
 
 Required fields include `id`, `name`, `version` (SemVer), `minAppVersion`, `description`, and `isDesktopOnly`. Optional: `author`, `authorUrl`, `fundingUrl`.

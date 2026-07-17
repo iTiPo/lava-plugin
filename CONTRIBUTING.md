@@ -6,7 +6,6 @@ This is the handbook for developing this plugin. Product overview for end users 
 
 - Node.js 18+ and npm.
 - Obsidian 1.11.4 or newer (`minAppVersion` in `manifest.json`).
-- For the Dev Container workflow: a bind-mounted vault at `/vault` (see `.devcontainer/devcontainer.json` when present).
 
 ## Setup
 
@@ -24,25 +23,24 @@ cp .env.example .env
 
 ## Develop
 
+By default, `npm run dev` and `npm run build` write `main.js` to the repository root.
+
+To install into an Obsidian vault during development, set `LAVA_PLUGIN_DIR` in `.env` to that vault’s plugin folder (see `.env.example`). Then `dev` / `build` write `main.js` there, and `npm run copy` copies `manifest.json` and `styles.css` into the same directory.
+
 ```bash
+npm run copy
 npm run dev
 ```
 
-`npm run dev` runs esbuild in watch mode. In the Dev Container, rebuilds write directly to `/vault/.obsidian/plugins/lava-plugin/main.js`. Reload Obsidian (or disable and re-enable the plugin) to pick up changes.
+`npm run dev` runs esbuild in watch mode. Reload Obsidian (or disable and re-enable the plugin) to pick up changes.
 
-For a one-off production bundle:
+For a one-off production bundle (repo-root `main.js` unless `LAVA_PLUGIN_DIR` is set):
 
 ```bash
 npm run build
 ```
 
-When you are ready to test the build in Obsidian, copy the required plugin files into the vault plugin directory:
-
-```bash
-npm run copy
-```
-
-In the Dev Container this targets `/vault/.obsidian/plugins/lava-plugin/`.
+`npm run copy` requires `LAVA_PLUGIN_DIR` (from `.env` or the environment). It only copies `manifest.json` and `styles.css`; `main.js` comes from `dev` or `build`.
 
 ### Manual install
 

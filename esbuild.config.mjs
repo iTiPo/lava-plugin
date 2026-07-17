@@ -3,7 +3,9 @@ import esbuildSvelte from 'esbuild-svelte';
 import { sveltePreprocess } from 'svelte-preprocess';
 import { configDotenv } from 'dotenv';
 import process from 'process';
+import { mkdirSync } from 'node:fs';
 import { builtinModules } from 'node:module';
+import path from 'node:path';
 
 configDotenv();
 
@@ -14,6 +16,12 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === 'production';
+
+const outDir = process.env.LAVA_PLUGIN_DIR
+    ? path.resolve(process.env.LAVA_PLUGIN_DIR)
+    : path.resolve('.');
+const outfile = path.join(outDir, 'main.js');
+mkdirSync(outDir, { recursive: true });
 
 const context = await esbuild.context({
     banner: {
@@ -49,7 +57,7 @@ const context = await esbuild.context({
         __LAVA_SUPABASE_ANON_KEY__: JSON.stringify(process.env.LAVA_SUPABASE_ANON_KEY ?? ''),
         __LAVA_API_BASE_URL__: JSON.stringify(process.env.LAVA_API_BASE_URL ?? ''),
     },
-    outfile: '/vault/.obsidian/plugins/lava-plugin/main.js',
+    outfile,
     minify: prod,
     plugins: [
         esbuildSvelte({

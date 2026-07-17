@@ -1,0 +1,2 @@
+- Follow [CONTRIBUTING.md](CONTRIBUTING.md) for setup, build, lint, and release. Do not skip those steps. Product context for end users is in [README.md](README.md).
+- After code changes, run the validate commands documented in CONTRIBUTING.

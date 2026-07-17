@@ -63,10 +63,6 @@ npm run build
 npm run lint
 ```
 
-## Development guidelines
-
-Obsidian plugin conventions, security, UX, performance, and troubleshooting live in [docs/obsidian-plugin-guidelines.md](docs/obsidian-plugin-guidelines.md).
-
 ## Release
 
 - Release artifacts are `manifest.json`, `main.js`, and `styles.css`. Bump `version` in `manifest.json`, update `versions.json`, and create a GitHub release whose tag matches the version exactly (no `v` prefix).

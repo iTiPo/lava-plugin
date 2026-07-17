@@ -16,7 +16,11 @@ From the repository root, install dependencies:
 npm ci
 ```
 
-Copy `.env.example` to `.env` and fill in the values it defines.
+Copy `.env.example` to `.env` and fill in the values it defines:
+
+```bash
+cp .env.example .env
+```
 
 ## Develop
 

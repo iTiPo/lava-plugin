@@ -5,30 +5,14 @@ Lava is an AI assistant inside Obsidian. Chat with models, mention notes in conv
 ## Features
 
 - **Chat in Obsidian** — open a dedicated chat view from the ribbon or command palette.
-- **Magic-link sign-in** — authenticate with your email; no password in the plugin.
 - **Note mentions** — type `@` to mention notes; the assistant can read those notes when answering.
 - **Read-only vault tools** — the assistant can read note content you point it at; it cannot create, edit, or delete notes.
 - **Chat history** — conversations are stored with the plugin data in your vault.
-- **Desktop only** — Lava requires the desktop app (`isDesktopOnly`).
 
 ## Requirements
 
 - Obsidian **1.11.4** or newer
 - Desktop (Windows, macOS, or Linux)
-
-## Install
-
-### Community plugins
-
-1. Open **Settings → Community plugins** and turn off **Restricted mode** if needed.
-2. Select **Browse**, search for **Lava**, and install it.
-3. Enable **Lava** under **Installed plugins**.
-
-### Manual install (GitHub release)
-
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [GitHub release](https://github.com/itipo/lava-plugin/releases).
-2. Copy them into `<Vault>/.obsidian/plugins/lava-plugin/`.
-3. Reload Obsidian and enable **Lava** under **Settings → Community plugins**.
 
 ## Getting started
 

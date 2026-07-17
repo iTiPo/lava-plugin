@@ -67,3 +67,7 @@ npm run lint
 
 - Release artifacts are `manifest.json`, `main.js`, and `styles.css`. Bump `version` in `manifest.json`, update `versions.json`, and create a GitHub release whose tag matches the version exactly (no `v` prefix).
 - You can bump versions with `npm version patch`, `npm version minor`, or `npm version major` after updating `minAppVersion` in `manifest.json` when needed.
+
+## Development notes
+
+Obsidian API reference: https://docs.obsidian.md

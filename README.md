@@ -40,4 +40,4 @@ See [LICENSE.md](LICENSE.md).
 
 ## Contributing
 
-Want to build or change the plugin? See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, development, and release. AI coding agents should also read [AGENTS.md](AGENTS.md).
+Want to build or change the plugin? See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, development, and release.

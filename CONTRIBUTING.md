@@ -63,20 +63,6 @@ npm run build
 npm run lint
 ```
 
-### Auth and local end-to-end testing
-
-Chat and magic-link auth depend on the **Lava backend API**, which lives in a separate repository (this plugin repo has no `backend/` folder). Point `LAVA_API_BASE_URL` at a running API (default in `.env.example`: `http://localhost:3000/v1`).
-
-Before end-to-end auth testing:
-
-1. Run the Lava backend locally (or against a dedicated environment) with its own env vars (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `MAGIC_LINK_BASE_URL`, and other backend requirements). Follow that repository's setup docs.
-2. In Supabase **Auth → URL Configuration**, add `obsidian://lava-plugin-auth-callback` to **Additional Redirect URLs** if you still use redirect-based Auth flows elsewhere.
-3. Disable Supabase Auth's built-in email sending (no-op Send Email Hook or equivalent). The Lava backend generates the magic-link token and emails an https handoff link via Resend.
-4. Ensure the plugin `.env` has valid `LAVA_SUPABASE_URL`, `LAVA_SUPABASE_ANON_KEY`, and `LAVA_API_BASE_URL`.
-5. The plugin requests `POST /v1/auth/magic-link` with `{ email }`. The emailed link is `{MAGIC_LINK_BASE_URL}?token_hash=…&type=magiclink` (e.g. `https://getlava.me/auth/obsidian?…`), which opens `obsidian://lava-plugin-auth-callback?…`; the plugin completes with `verifyOtp`.
-
-Manual E2E: request a magic link → open the email link in Obsidian → send a chat message → confirm 401 banner + **Sign in** appears when the token is missing or invalid.
-
 ## Development notes
 
 Guidelines for working on the Obsidian plugin during development.

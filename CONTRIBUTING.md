@@ -56,12 +56,12 @@ Then reload Obsidian and enable **Lava** under **Settings → Community plugins*
 
 ## Validate
 
+Run the following commands to check that everything builds and the linter passes:
+
 ```bash
 npm run build
 npm run lint
 ```
-
-This runs checks.
 
 ### Auth and local end-to-end testing
 

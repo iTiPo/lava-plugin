@@ -53,8 +53,13 @@ const context = await esbuild.context({
     sourcemap: prod ? false : 'inline',
     treeShaking: true,
     define: {
-        __LAVA_SUPABASE_URL__: JSON.stringify(process.env.LAVA_SUPABASE_URL ?? ''),
-        __LAVA_SUPABASE_ANON_KEY__: JSON.stringify(process.env.LAVA_SUPABASE_ANON_KEY ?? ''),
+        __LAVA_SUPABASE_URL__: JSON.stringify(
+            process.env.LAVA_SUPABASE_URL ?? 'https://vmhztqoygyivwljwqfev.supabase.co',
+        ),
+        __LAVA_SUPABASE_ANON_KEY__: JSON.stringify(
+            process.env.LAVA_SUPABASE_ANON_KEY ??
+                'sb_publishable_MksFsw1kuAguwAeq4ySLTA_SkG76cPL',
+        ),
         __LAVA_API_BASE_URL__: JSON.stringify(process.env.LAVA_API_BASE_URL ?? ''),
     },
     outfile,

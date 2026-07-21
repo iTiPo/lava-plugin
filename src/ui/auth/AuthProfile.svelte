@@ -82,7 +82,7 @@
     <div class="lava-auth__stage">
         <div class="lava-auth__content lava-profile">
             <h1 class="lava-auth__card-title">Account</h1>
-            <p class="lava-auth__card-copy">Your Lava profile</p>
+            <p class="lava-auth__card-copy">Your Getlava profile</p>
 
             <div class="lava-auth__card lava-profile__card">
                 <div class="lava-profile__section">

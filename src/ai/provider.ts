@@ -11,7 +11,7 @@ const httpFetch = window.fetch.bind(window);
 export function buildModel(authStore: AuthStore): LanguageModelV4 {
     const { apiBaseUrl } = loadLavaConfig();
     const provider = createOpenAICompatible({
-        name: 'Lava API Inference',
+        name: 'Getlava API Inference',
         baseURL: apiBaseUrl,
         fetch: async (input, init) => {
             const token = await authStore.getAccessToken();

@@ -4,7 +4,7 @@ import type { AuthStore } from '../auth/auth-store';
 import { buildModel } from './provider';
 import { createReadNoteTool } from './tools/read-note';
 
-const LAVA_SYSTEM_INSTRUCTIONS = `You are Lava, an AI assistant embedded in Obsidian. You help the user think clearly and work with their notes. Be concise, accurate, and direct.
+const LAVA_SYSTEM_INSTRUCTIONS = `You are Getlava, an AI assistant embedded in Obsidian. You help the user think clearly and work with their notes. Be concise, accurate, and direct.
 
 ## Environment
 You run inside the user's Obsidian vault. Notes are markdown files identified by vault-relative paths (e.g. Projects/Idea.md).

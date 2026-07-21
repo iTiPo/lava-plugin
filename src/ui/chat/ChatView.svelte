@@ -345,9 +345,9 @@
     <div class="lava-chat__messages" bind:this={messagesEl} role="region" aria-label="Conversation">
         {#if chat.messages.length === 0}
             <div class="lava-chat__empty">
-                <div class="lava-chat__empty-title">Lava</div>
+                <div class="lava-chat__empty-title">Getlava</div>
                 <div class="lava-chat__empty-subtitle">
-                    Chat with an AI model. Configure your endpoint in Settings → Lava.
+                    Chat with an AI model. Configure your endpoint in Settings → Getlava.
                 </div>
                 {#if isAuthenticated}
                     <div class="lava-chat__suggestions">
@@ -372,7 +372,7 @@
                         {message.role === 'user'
                             ? 'You'
                             : message.role === 'assistant'
-                              ? 'Lava'
+                              ? 'Getlava'
                               : message.role}
                     </div>
                     {#if message.role === 'assistant'}
@@ -506,8 +506,8 @@
                     oninput={handleInput}
                     onkeydown={handleKeyDown}
                     onscroll={handleInputScroll}
-                    placeholder="Message Lava…"
-                    aria-label="Message Lava"
+                    placeholder="Message Getlava…"
+                    aria-label="Message Getlava"
                     rows="2"
                 ></textarea>
                 <div class="lava-chat__actions">

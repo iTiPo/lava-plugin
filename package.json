@@ -1,7 +1,7 @@
 {
-    "name": "obsidian-sample-plugin",
+    "name": "getlava",
     "version": "1.0.0",
-    "description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+    "description": "Getlava brings the ideas you have already captured into the conversation—so your vault becomes active material for better thinking.",
     "main": "main.js",
     "type": "module",
     "scripts": {

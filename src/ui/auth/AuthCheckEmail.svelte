@@ -32,7 +32,7 @@
             <header class="lava-auth__header">
                 <LavaMark />
                 <div class="lava-auth__brand-row">
-                    <span class="lava-auth__brand-name">LAVA</span>
+                    <span class="lava-auth__brand-name">GETLAVA</span>
                     <span class="lava-auth__brand-badge">for Obsidian</span>
                 </div>
             </header>

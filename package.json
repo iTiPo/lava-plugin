@@ -12,7 +12,7 @@
         "lint": "eslint . && svelte-check --tsconfig tsconfig.json"
     },
     "keywords": [],
-    "license": "0-BSD",
+    "license": "MIT",
     "dependencies": {
         "@supabase/supabase-js": "^2.49.8",
         "@ai-sdk/openai-compatible": "^3.0.5",

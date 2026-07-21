@@ -345,9 +345,9 @@
     <div class="lava-chat__messages" bind:this={messagesEl} role="region" aria-label="Conversation">
         {#if chat.messages.length === 0}
             <div class="lava-chat__empty">
-                <div class="lava-chat__empty-title">Getlava</div>
+                <div class="lava-chat__empty-title">Lava</div>
                 <div class="lava-chat__empty-subtitle">
-                    Chat with an AI model. Configure your endpoint in Settings → Getlava.
+                    Chat with an AI model. Configure your endpoint in Settings → Lava.
                 </div>
                 {#if isAuthenticated}
                     <div class="lava-chat__suggestions">

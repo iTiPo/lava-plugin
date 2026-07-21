@@ -73,7 +73,7 @@
             <header class="lava-auth__header">
                 <LavaMark />
                 <div class="lava-auth__brand-row">
-                    <span class="lava-auth__brand-name">GETLAVA</span>
+                    <span class="lava-auth__brand-name">LAVA</span>
                     <span class="lava-auth__brand-badge">for Obsidian</span>
                 </div>
             </header>
@@ -87,7 +87,7 @@
                     Sign in to think with the <em>notes</em> you trust.
                 </h1>
                 <p class="lava-auth__lede">
-                    Getlava brings the ideas you have already captured into the conversation—so your vault
+                    Lava brings the ideas you have already captured into the conversation—so your vault
                     becomes active material for better thinking.
                 </p>
             </div>
@@ -97,7 +97,7 @@
                     <span class="lava-auth__card-label">Sign in with email</span>
                     <h2 class="lava-auth__card-title">Your next good thought could be in here.</h2>
                     <p class="lava-auth__card-copy">
-                        Enter your email and we will send a magic link to open Getlava in Obsidian.
+                        Enter your email and we will send a magic link to open Lava in Obsidian.
                     </p>
 
                     <label class="lava-auth__label" for="lava-auth-email">Email</label>

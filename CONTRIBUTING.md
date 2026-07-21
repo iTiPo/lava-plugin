@@ -21,7 +21,7 @@ Copy `.env.example` to `.env` and set `LAVA_API_BASE_URL` (and any optional over
 cp .env.example .env
 ```
 
-Supabase URL and anon key default to the Getlava project; set `LAVA_SUPABASE_URL` / `LAVA_SUPABASE_ANON_KEY` only if you need a different project.
+Supabase URL and anon key default to the Lava project; set `LAVA_SUPABASE_URL` / `LAVA_SUPABASE_ANON_KEY` only if you need a different project.
 
 ## Develop
 

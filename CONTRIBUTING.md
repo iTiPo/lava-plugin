@@ -15,13 +15,13 @@ From the repository root, install dependencies:
 npm ci
 ```
 
-Copy `.env.example` to `.env` and set `LAVA_API_BASE_URL` (and any optional overrides):
+Copy `.env.example` to `.env` if you need optional overrides (for example a local API or a different Supabase project):
 
 ```bash
 cp .env.example .env
 ```
 
-Supabase URL and anon key default to the Lava project; set `LAVA_SUPABASE_URL` / `LAVA_SUPABASE_ANON_KEY` only if you need a different project.
+API base URL, Supabase URL, and anon key default to the Getlava project; set `LAVA_API_BASE_URL` / `LAVA_SUPABASE_URL` / `LAVA_SUPABASE_ANON_KEY` only if you need different values.
 
 ## Develop
 

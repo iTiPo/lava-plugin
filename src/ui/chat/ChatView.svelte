@@ -372,7 +372,7 @@
                         {message.role === 'user'
                             ? 'You'
                             : message.role === 'assistant'
-                              ? 'Getlava'
+                              ? 'Lava'
                               : message.role}
                     </div>
                     {#if message.role === 'assistant'}

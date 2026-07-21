@@ -60,7 +60,9 @@ const context = await esbuild.context({
             process.env.LAVA_SUPABASE_ANON_KEY ??
                 'sb_publishable_MksFsw1kuAguwAeq4ySLTA_SkG76cPL',
         ),
-        __LAVA_API_BASE_URL__: JSON.stringify(process.env.LAVA_API_BASE_URL ?? ''),
+        __LAVA_API_BASE_URL__: JSON.stringify(
+            process.env.LAVA_API_BASE_URL ?? 'https://api.getlava.me/v1',
+        ),
     },
     outfile,
     minify: prod,

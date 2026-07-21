@@ -20,7 +20,7 @@ export class LavaChatView extends ItemView {
 
     getDisplayText(): string {
         const title = this.plugin.chatSessions.getActiveSessionTitle();
-        return title === 'New chat' ? 'Getlava chat' : `Getlava · ${title}`;
+        return title === 'New chat' ? 'Lava chat' : `Lava · ${title}`;
     }
 
     getIcon(): string {

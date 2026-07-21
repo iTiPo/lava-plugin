@@ -506,8 +506,8 @@
                     oninput={handleInput}
                     onkeydown={handleKeyDown}
                     onscroll={handleInputScroll}
-                    placeholder="Message Getlava…"
-                    aria-label="Message Getlava"
+                    placeholder="Message Lava…"
+                    aria-label="Message Lava"
                     rows="2"
                 ></textarea>
                 <div class="lava-chat__actions">

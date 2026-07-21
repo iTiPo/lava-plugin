@@ -36,7 +36,7 @@ Getlava needs a network connection to the Getlava service for sign-in and chat.
 
 ## License
 
-MIT. See [LICENSE.md](LICENSE.md).
+See [LICENSE.md](LICENSE.md).
 
 ## Contributing
 

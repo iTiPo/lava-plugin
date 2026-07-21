@@ -1,9 +1,10 @@
 {
-	"id": "lava-plugin",
-	"name": "Lava",
+	"id": "getlava",
+	"name": "Getlava",
 	"version": "1.0.0",
 	"minAppVersion": "1.11.4",
-	"description": "An AI assistant that powers your thinking and noting process by chatting with AI models directly inside Obsidian.",
-	"author": "Lava",
+	"description": "Getlava brings the ideas you have already captured into the conversation—so your vault becomes active material for better thinking.",
+	"author": "Getlava",
+	"authorUrl": "https://getlava.me",
 	"isDesktopOnly": true
 }

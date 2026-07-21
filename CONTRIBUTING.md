@@ -49,10 +49,10 @@ npm run build
 Copy `main.js`, `manifest.json`, and `styles.css` into your vault at:
 
 ```
-<Vault>/.obsidian/plugins/lava-plugin/
+<Vault>/.obsidian/plugins/getlava/
 ```
 
-Then reload Obsidian and enable **Lava** under **Settings → Community plugins**.
+Then reload Obsidian and enable **Getlava** under **Settings → Community plugins**.
 
 ## Validate
 

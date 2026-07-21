@@ -30,7 +30,7 @@ export default class LavaPlugin extends Plugin {
 
         this.registerView(VIEW_TYPE_LAVA_CHAT, (leaf) => new LavaChatView(leaf, this));
 
-        this.registerObsidianProtocolHandler('lava-plugin-auth-callback', (params) => {
+        this.registerObsidianProtocolHandler('getlava-auth-callback', (params) => {
             void this.authStore.completeMagicLink(params);
             void this.activateChatView();
         });

@@ -15,7 +15,7 @@ export function createSupabaseStorage(app: App): SupportedStorage {
     };
 }
 
-const SECRET_ID_PREFIX = 'getlava-auth-';
+const SECRET_ID_PREFIX = 'lava-plugin-auth-';
 const MAX_SECRET_ID_LENGTH = 64;
 
 function secretId(key: string): string {

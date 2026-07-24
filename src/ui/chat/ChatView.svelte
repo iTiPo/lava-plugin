@@ -3,7 +3,7 @@
     import { setIcon, type App } from 'obsidian';
     import { getToolName, isDynamicToolUIPart, isToolUIPart } from 'ai';
     import type { LavaChat, LavaUIMessage } from '../../ai/chat-factory';
-    import type { ChatMode } from '../../chat/persistence-types';
+    import type { ChatMode } from '../../domain/chat';
     import type { ToolApprovalScope } from '../../mcp/types';
     import { getNoteMentions, type LavaMessageMetadata } from '../../ai/chat-types';
     import { isAuthApiError } from '../../auth/auth-errors';

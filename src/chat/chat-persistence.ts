@@ -2,7 +2,6 @@ import { normalizePath, type Plugin } from 'obsidian';
 import {
     CHAT_INDEX_VERSION,
     createEmptyChatIndex,
-    type ConversationToolGrant,
     type ChatIndex,
     type ChatSessionMeta,
 } from './session-types';
@@ -12,6 +11,7 @@ import {
     type NewChatRecord,
     type SessionSnapshot,
 } from './persistence-types';
+import type { McpConversationGrant } from '../mcp/types';
 import { parseChatRecord, replayChatRecords } from './session-replay';
 
 const INDEX_FILE = 'index.json';
@@ -263,11 +263,11 @@ function normalizeSessionMeta(meta: ChatSessionMeta): ChatSessionMeta {
     };
 }
 
-function normalizeToolGrants(value: unknown): ConversationToolGrant[] {
+function normalizeToolGrants(value: unknown): McpConversationGrant[] {
     if (!Array.isArray(value)) return [];
-    return value.filter((grant): grant is ConversationToolGrant => {
+    return value.filter((grant): grant is McpConversationGrant => {
         if (!grant || typeof grant !== 'object') return false;
-        const candidate = grant as Partial<ConversationToolGrant>;
+        const candidate = grant as Partial<McpConversationGrant>;
         return (
             typeof candidate.serverId === 'string' &&
             typeof candidate.toolName === 'string' &&

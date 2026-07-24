@@ -7,7 +7,7 @@
     import type { AuthStore } from '../../auth/auth-store';
     import type { ChatSession } from '../../chat/session-types';
     import type { ChatSessionStore } from '../../chat/session-store';
-    import type { ChatMode } from '../../chat/persistence-types';
+    import type { ChatMode } from '../../domain/chat';
     import type { McpConnectionManager } from '../../mcp/connection-manager';
     import { countToolPolicies } from '../../mcp/approval-policy';
     import type { McpSettingsStore } from '../../mcp/settings-store';

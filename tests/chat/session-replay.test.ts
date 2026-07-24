@@ -97,7 +97,7 @@ function messageRecord(
         kind: 'message',
         message,
         incomplete,
-    } as ChatRecord;
+    };
 }
 
 function runRecord(

@@ -1,4 +1,4 @@
-import type { LavaUIMessage } from '../ai/chat-types';
+import type { UIMessage } from 'ai';
 import {
     CHAT_RECORD_VERSION,
     type ChatRecord,
@@ -20,7 +20,7 @@ export function parseChatRecord(line: string, legacySeq: number): ChatRecord | u
     }
 
     if (!value || typeof value !== 'object') return undefined;
-    const candidate = value as Partial<ChatRecord> & Partial<LavaUIMessage>;
+    const candidate = value as Partial<ChatRecord> & Partial<UIMessage>;
 
     if (candidate.version === CHAT_RECORD_VERSION && isChatRecord(candidate)) {
         return candidate;
@@ -169,9 +169,9 @@ function isChatRecord(value: Partial<ChatRecord>): value is ChatRecord {
     return false;
 }
 
-function isLegacyMessage(value: unknown): value is LavaUIMessage {
+function isLegacyMessage(value: unknown): value is UIMessage {
     if (!value || typeof value !== 'object') return false;
-    const message = value as Partial<LavaUIMessage>;
+    const message = value as Partial<UIMessage>;
     return (
         typeof message.id === 'string' &&
         typeof message.role === 'string' &&

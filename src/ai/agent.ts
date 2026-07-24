@@ -1,14 +1,17 @@
 import { ToolLoopAgent, type ToolSet } from 'ai';
 import type { App } from 'obsidian';
 import type { AuthStore } from '../auth/auth-store';
-import type { ConversationToolGrant } from '../chat/session-types';
-import type { ChatMode, ToolAuthorization } from '../chat/persistence-types';
+import type { ChatMode } from '../domain/chat';
 import {
     resolveToolPolicy,
     type ToolPolicyContext,
 } from '../mcp/approval-policy';
 import { findExternalReference, sanitizeToolValue } from '../mcp/output';
-import type { ConnectedMcpTool } from '../mcp/types';
+import type {
+    ConnectedMcpTool,
+    McpConversationGrant,
+    ToolAuthorization,
+} from '../mcp/types';
 import { buildModel } from './provider';
 import { createReadNoteTool } from './tools/read-note';
 
@@ -63,7 +66,7 @@ export interface CreateLavaAgentOptions {
     mode: ChatMode;
     mcpTools?: ToolSet;
     descriptors?: ConnectedMcpTool[];
-    conversationGrants?: ConversationToolGrant[] | (() => ConversationToolGrant[]);
+    conversationGrants?: McpConversationGrant[] | (() => McpConversationGrant[]);
     lifecycle?: LavaAgentLifecycle;
 }
 

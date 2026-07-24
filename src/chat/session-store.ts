@@ -1,19 +1,15 @@
 import type { LavaChat, LavaUIMessage } from '../ai/chat-types';
 import { generateId } from 'ai';
+import type { ChatMode } from '../domain/chat';
+import type { McpConversationGrant, ToolAuthorization } from '../mcp/types';
 import type { ChatPersistence } from './chat-persistence';
-import type {
-    ChatMode,
-    RunStatus,
-    ToolAuthorization,
-    ToolOperationStatus,
-} from './persistence-types';
+import type { RunStatus, ToolOperationStatus } from './persistence-types';
 import { applyChatRecord } from './session-replay';
 import {
     DEFAULT_SESSION_TITLE,
     type ChatIndex,
     type ChatSession,
     type ChatSessionMeta,
-    type ConversationToolGrant,
     titleFromFirstMessage,
 } from './session-types';
 
@@ -204,7 +200,7 @@ export class ChatSessionStore {
         if (!session || session.messagesLoaded) return;
 
         const snapshot = await this.persistence.loadSnapshot(sessionId);
-        session.messages = snapshot.messages;
+        session.messages = snapshot.messages as LavaUIMessage[];
         session.snapshot = snapshot;
         session.messagesLoaded = true;
     }
@@ -273,7 +269,7 @@ export class ChatSessionStore {
 
     async setConversationGrant(
         sessionId: string,
-        grant: ConversationToolGrant,
+        grant: McpConversationGrant,
     ): Promise<void> {
         const session = this.getSession(sessionId);
         if (!session) return;

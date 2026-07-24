@@ -12,9 +12,6 @@ import type {
 export type McpSettingsChange = 'configuration' | 'manifest';
 type Listener = (change: McpSettingsChange) => void;
 
-/** Legacy bearer-token secret ids from before custom headers. */
-const MCP_SECRET_PREFIX = 'lava-plugin-mcp-';
-
 export class McpSettingsStore {
     private data: McpPluginData = { servers: [] };
     private readonly listeners = new Set<Listener>();
@@ -24,7 +21,6 @@ export class McpSettingsStore {
     async init(): Promise<void> {
         const pluginData = await loadPluginData(this.plugin);
         this.data = normalizeMcpData(pluginData.mcp);
-        clearLegacyBearerSecrets(this.plugin, this.data.servers);
     }
 
     subscribe(listener: Listener): () => void {
@@ -74,7 +70,6 @@ export class McpSettingsStore {
 
     async removeServer(id: string): Promise<void> {
         this.data.servers = this.data.servers.filter((server) => server.id !== id);
-        clearLegacyBearerSecret(this.plugin, id);
         await this.persist('configuration');
     }
 
@@ -220,16 +215,4 @@ function cloneServer(server: McpServerConfig): McpServerConfig {
         headers: server.headers.map((header) => ({ ...header })),
         tools: server.tools.map((tool) => ({ ...tool })),
     };
-}
-
-function clearLegacyBearerSecrets(plugin: Plugin, servers: McpServerConfig[]): void {
-    for (const server of servers) clearLegacyBearerSecret(plugin, server.id);
-}
-
-function clearLegacyBearerSecret(plugin: Plugin, serverId: string): void {
-    plugin.app.secretStorage.setSecret(legacyBearerSecretId(serverId), '');
-}
-
-function legacyBearerSecretId(serverId: string): string {
-    return `${MCP_SECRET_PREFIX}${serverId}-bearer`.slice(0, 64);
 }

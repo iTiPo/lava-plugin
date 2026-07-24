@@ -777,7 +777,7 @@ If your plugin does not need CSS, delete this file.
     background-color: var(--background-modifier-form-field);
 }
 
-.lava-chat__input-wrapper:focus-within {
+.lava-chat__input-wrapper:has(.lava-chat__input:focus) {
     border-color: var(--interactive-accent);
 }
 

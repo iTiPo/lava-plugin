@@ -699,31 +699,6 @@
 
     {#if isAuthenticated}
         <form class="lava-chat__input-area" onsubmit={handleSubmit}>
-            <div class="lava-chat__mode-bar">
-                <div class="lava-chat__mode-switch" role="group" aria-label="Chat mode">
-                    <button
-                        type="button"
-                        class:lava-chat__mode-option--active={mode === 'chat'}
-                        aria-pressed={mode === 'chat'}
-                        onclick={() => onModeChange?.('chat')}
-                    >
-                        Chat
-                    </button>
-                    <button
-                        type="button"
-                        class:lava-chat__mode-option--active={mode === 'agent'}
-                        aria-pressed={mode === 'agent'}
-                        onclick={() => onModeChange?.('agent')}
-                    >
-                        Agent
-                    </button>
-                </div>
-                {#if mode === 'agent'}
-                    <span class="lava-chat__mode-summary">
-                        {agentToolCounts.auto} auto · {agentToolCounts.ask} ask
-                    </span>
-                {/if}
-            </div>
             {#if mode === 'agent' && !hasConfiguredMcpServers}
                 <div class="lava-chat__agent-notice" role="status">
                     Configure an MCP server in Settings → Getlava to add Agent tools.
@@ -760,6 +735,34 @@
                     aria-label="Message Lava"
                     rows="2"
                 ></textarea>
+                <div class="lava-chat__mode-actions">
+                    <div
+                        class="lava-chat__mode-switch"
+                        role="group"
+                        aria-label={
+                            mode === 'agent'
+                                ? `Chat mode (${agentToolCounts.auto} auto, ${agentToolCounts.ask} ask)`
+                                : 'Chat mode'
+                        }
+                    >
+                        <button
+                            type="button"
+                            class:lava-chat__mode-option--active={mode === 'chat'}
+                            aria-pressed={mode === 'chat'}
+                            onclick={() => onModeChange?.('chat')}
+                        >
+                            Chat
+                        </button>
+                        <button
+                            type="button"
+                            class:lava-chat__mode-option--active={mode === 'agent'}
+                            aria-pressed={mode === 'agent'}
+                            onclick={() => onModeChange?.('agent')}
+                        >
+                            Agent
+                        </button>
+                    </div>
+                </div>
                 <div class="lava-chat__actions">
                     {#if isBusy}
                         <button

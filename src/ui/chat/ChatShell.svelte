@@ -249,14 +249,6 @@
             new Notice('Finish or deny the current tool request before changing mode.');
             return;
         }
-        if (
-            mode === 'agent' &&
-            !window.confirm(
-                'Agent mode can use configured MCP tools and change external systems. Continue?',
-            )
-        ) {
-            return;
-        }
         if (activeChat) sessionStore.syncFromChat(activeChat);
         await sessionStore.setMode(session.id, mode);
         await initializeChat(session);

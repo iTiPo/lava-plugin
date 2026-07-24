@@ -651,40 +651,35 @@ If your plugin does not need CSS, delete this file.
     border-top: 1px solid var(--background-modifier-border);
 }
 
-.lava-chat__mode-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+.lava-chat__mode-actions {
+    position: absolute;
+    left: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 3;
 }
 
 .lava-chat__mode-switch {
     display: inline-flex;
-    padding: 0.15rem;
+    padding: 0.1rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 0.45rem;
-    background: var(--background-secondary);
+    border-radius: 0.4rem;
+    background: var(--background-primary);
 }
 
 .lava-chat__mode-switch button {
-    padding: 0.2rem 0.55rem;
+    padding: 0.15rem 0.5rem;
     border: none;
     border-radius: 0.3rem;
     background: transparent;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
+    line-height: 1.35;
     cursor: pointer;
 }
 
 .lava-chat__mode-switch .lava-chat__mode-option--active {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
-}
-
-.lava-chat__mode-summary {
-    color: var(--text-muted);
-    font-size: var(--font-ui-smaller);
 }
 
 .lava-chat__agent-notice {

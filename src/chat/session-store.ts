@@ -7,6 +7,7 @@ import type {
     ToolAuthorization,
     ToolOperationStatus,
 } from './persistence-types';
+import { applyChatRecord } from './session-replay';
 import {
     DEFAULT_SESSION_TITLE,
     type ChatIndex,
@@ -159,8 +160,8 @@ export class ChatSessionStore {
         return session;
     }
 
-    syncFromChat(chat: LavaChat): void {
-        const session = this.sessions.find((s) => s.id === this.activeSessionId);
+    syncFromChat(chat: LavaChat, sessionId = this.activeSessionId): void {
+        const session = this.sessions.find((s) => s.id === sessionId);
         if (!session) return;
         session.messages = [...chat.messages];
         session.updatedAt = Date.now();
@@ -241,11 +242,12 @@ export class ChatSessionStore {
                 index === existingIndex ? message : candidate,
             );
         }
-        await this.persistence.appendRecord(sessionId, {
+        const record = await this.persistence.appendRecord(sessionId, {
             kind: 'message',
             message,
             incomplete,
         });
+        session.snapshot = applyChatRecord(session.snapshot, record);
         session.messagesLoaded = true;
         session.updatedAt = now;
         session.storageVersion = 2;
@@ -294,13 +296,15 @@ export class ChatSessionStore {
         mode: ChatMode,
     ): Promise<string> {
         const runId = generateId();
-        await this.persistence.appendRecord(sessionId, {
+        const record = await this.persistence.appendRecord(sessionId, {
             kind: 'run',
             runId,
             triggerMessageId,
             mode,
             status: 'running',
         });
+        const session = this.getSession(sessionId);
+        if (session) session.snapshot = applyChatRecord(session.snapshot, record);
         return runId;
     }
 
@@ -312,7 +316,7 @@ export class ChatSessionStore {
         status: RunStatus,
         error?: string,
     ): Promise<void> {
-        await this.persistence.appendRecord(sessionId, {
+        const record = await this.persistence.appendRecord(sessionId, {
             kind: 'run',
             runId,
             triggerMessageId,
@@ -320,6 +324,8 @@ export class ChatSessionStore {
             status,
             error,
         });
+        const session = this.getSession(sessionId);
+        if (session) session.snapshot = applyChatRecord(session.snapshot, record);
         if (status !== 'running' && status !== 'awaiting-approval') {
             void this.persistence.maybeCompact(sessionId);
         }
@@ -341,10 +347,12 @@ export class ChatSessionStore {
             error?: string;
         },
     ): Promise<void> {
-        await this.persistence.appendRecord(sessionId, {
+        const record = await this.persistence.appendRecord(sessionId, {
             kind: 'tool',
             ...operation,
         });
+        const session = this.getSession(sessionId);
+        if (session) session.snapshot = applyChatRecord(session.snapshot, record);
     }
 
     async flushIndex(): Promise<void> {
@@ -369,4 +377,5 @@ export class ChatSessionStore {
             storageVersion: session.storageVersion,
         };
     }
+
 }

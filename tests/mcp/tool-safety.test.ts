@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fingerprintToolDefinition } from '../../src/mcp/fingerprint';
 import { findExternalReference, sanitizeToolValue } from '../../src/mcp/output';
+import { namespacedToolId } from '../../src/mcp/connection-manager';
 
 describe('MCP tool safety helpers', () => {
     it('fingerprints objects independently of key order', async () => {
@@ -37,5 +38,16 @@ describe('MCP tool safety helpers', () => {
                 },
             }),
         ).toBe('https://github.com/getlava/lava-plugin/issues/10');
+    });
+
+    it('keeps sanitized tool-name collisions distinct', async () => {
+        const firstFingerprint = await fingerprintToolDefinition({ name: 'create-issue' });
+        const secondFingerprint = await fingerprintToolDefinition({ name: 'create_issue' });
+
+        expect(
+            namespacedToolId('github', 'create-issue', firstFingerprint),
+        ).not.toBe(
+            namespacedToolId('github', 'create_issue', secondFingerprint),
+        );
     });
 });

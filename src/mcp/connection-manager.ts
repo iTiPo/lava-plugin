@@ -27,6 +27,7 @@ export class McpConnectionManager {
     private readonly statuses = new Map<string, McpConnectionStatus>();
     private readonly errors = new Map<string, string>();
     private readonly listeners = new Set<Listener>();
+    private readonly generations = new Map<string, number>();
 
     constructor(private readonly settings: McpSettingsStore) {}
 
@@ -79,6 +80,7 @@ export class McpConnectionManager {
         const server = this.settings.getServer(serverId);
         if (!server) throw new Error('MCP server not found.');
         if (!server.url) throw new Error('MCP server URL is required.');
+        const generation = this.generations.get(serverId) ?? 0;
 
         this.setStatus(serverId, 'connecting');
         let client: MCPClient | undefined;
@@ -100,19 +102,27 @@ export class McpConnectionManager {
                     this.emit();
                 },
             });
-            const definitions = await client.listTools();
-            const manifest = await buildManifest(server, definitions);
-            await this.settings.updateServer(serverId, {
-                tools: manifest,
-                manifestUpdatedAt: Date.now(),
-            });
-            const discovered = await client.tools();
+            const definitions = await listAllTools(client);
+            if ((this.generations.get(serverId) ?? 0) !== generation) {
+                throw new Error('MCP connection was superseded by a settings change.');
+            }
+            const latestServer = this.settings.getServer(serverId) ?? server;
+            const manifest = await buildManifest(latestServer, definitions);
+            await this.settings.updateServer(
+                serverId,
+                {
+                    tools: manifest,
+                    manifestUpdatedAt: Date.now(),
+                },
+                'manifest',
+            );
+            const discovered = client.toolsFromDefinitions(definitions);
             const tools: ToolSet = {};
             const descriptors: ConnectedMcpTool[] = [];
             for (const entry of manifest) {
                 const source = discovered[entry.name];
                 if (!source) continue;
-                const id = namespacedToolId(server.id, entry.name);
+                const id = namespacedToolId(server.id, entry.name, entry.fingerprint);
                 tools[id] = withServerMetadata(source, server, entry);
                 descriptors.push({
                     id,
@@ -124,6 +134,9 @@ export class McpConnectionManager {
                     readOnlyHint: entry.readOnlyHint,
                     policy: entry.policy,
                 });
+            }
+            if ((this.generations.get(serverId) ?? 0) !== generation) {
+                throw new Error('MCP connection was superseded by a settings change.');
             }
             const connection = { client, tools, descriptors };
             this.connections.set(serverId, connection);
@@ -139,6 +152,7 @@ export class McpConnectionManager {
     }
 
     async disconnect(serverId: string): Promise<void> {
+        this.generations.set(serverId, (this.generations.get(serverId) ?? 0) + 1);
         const connection = this.connections.get(serverId);
         this.connections.delete(serverId);
         if (connection) await connection.client.close().catch(() => undefined);
@@ -169,6 +183,7 @@ async function buildManifest(
     return Promise.all(
         definitions.tools.map(async (definition) => {
             const fingerprint = await fingerprintToolDefinition({
+                name: definition.name,
                 title: definition.title,
                 description: definition.description,
                 inputSchema: definition.inputSchema,
@@ -212,10 +227,14 @@ function withServerMetadata(
     };
 }
 
-export function namespacedToolId(serverId: string, toolName: string): string {
-    const serverPart = sanitizeName(serverId).slice(0, 12);
-    const toolPart = sanitizeName(toolName).slice(0, 45);
-    return `mcp_${serverPart}_${toolPart}`;
+export function namespacedToolId(
+    serverId: string,
+    toolName: string,
+    fingerprint: string,
+): string {
+    const serverPart = sanitizeName(serverId).slice(0, 10);
+    const toolPart = sanitizeName(toolName).slice(0, 34);
+    return `mcp_${serverPart}_${toolPart}_${fingerprint.slice(0, 12)}`;
 }
 
 function sanitizeName(value: string): string {
@@ -224,4 +243,17 @@ function sanitizeName(value: string): string {
 
 function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : 'Could not connect to MCP server.';
+}
+
+async function listAllTools(client: MCPClient): Promise<ListToolsResult> {
+    const tools: ListToolsResult['tools'] = [];
+    let cursor: string | undefined;
+    do {
+        const page = await client.listTools({
+            params: cursor ? { cursor } : undefined,
+        });
+        tools.push(...page.tools);
+        cursor = page.nextCursor;
+    } while (cursor);
+    return { tools };
 }

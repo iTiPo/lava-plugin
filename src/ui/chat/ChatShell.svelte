@@ -51,10 +51,11 @@
     let chatLoading = $state(false);
     let chatLoadError = $state('');
     let connectedTools = $state<ConnectedMcpTool[]>([]);
-    let activeRunId = '';
-    let activeTriggerMessageId = '';
+    const runStates = new Map<string, { runId: string; triggerMessageId: string }>();
     let initializationId = 0;
     let recoveryWarning = $state('');
+    let settingsRefreshTimer: number | undefined;
+    const pendingSettingsRefresh = new Set<string>();
 
     $effect.pre(() => {
         isAuthenticated = authStore.isAuthenticated();
@@ -74,6 +75,7 @@
         const requestId = ++initializationId;
         chatLoading = true;
         chatLoadError = '';
+        pendingSettingsRefresh.delete(session.id);
         await recoverSessionRun(session);
         try {
             const mcp =
@@ -91,10 +93,12 @@
                 descriptors: mcp.descriptors,
                 conversationGrants: () => session.toolGrants,
                 lifecycle: {
-                    currentRun: () =>
-                        activeRunId
-                            ? { sessionId: session.id, runId: activeRunId }
-                            : undefined,
+                    currentRun: () => {
+                        const run = runStates.get(session.id);
+                        return run
+                            ? { sessionId: session.id, runId: run.runId }
+                            : undefined;
+                    },
                     toolStarted: async (operation) => {
                         await sessionStore.recordToolOperation(session.id, {
                             ...operation,
@@ -112,20 +116,25 @@
             onError: handleChatError,
             onFinish: ({ message, isAbort, isError }) =>
                 handleRunFinish(session, message, isAbort, isError),
-            onBeforeAutomaticSend: async (messages) => {
+            onApprovalStateChange: async (messages, willContinue) => {
                 const lastMessage = messages[messages.length - 1];
                 if (lastMessage) await sessionStore.persistMessage(session.id, lastMessage);
-                if (activeRunId) {
+                const run = runStates.get(session.id);
+                if (willContinue && run) {
                     await sessionStore.updateRun(
                         session.id,
-                        activeRunId,
-                        activeTriggerMessageId,
+                        run.runId,
+                        run.triggerMessageId,
                         session.mode,
                         'running',
                     );
                 }
             },
         });
+            if (pendingSettingsRefresh.has(session.id)) {
+                pendingSettingsRefresh.delete(session.id);
+                scheduleMcpRefresh(session);
+            }
         } catch (error) {
             if (requestId !== initializationId) return;
             activeChat = undefined;
@@ -142,8 +151,10 @@
         const activeRun = session.snapshot?.activeRun;
         if (!activeRun) return;
         if (activeRun.status === 'awaiting-approval') {
-            activeRunId = activeRun.runId;
-            activeTriggerMessageId = activeRun.triggerMessageId;
+            runStates.set(session.id, {
+                runId: activeRun.runId,
+                triggerMessageId: activeRun.triggerMessageId,
+            });
             return;
         }
 
@@ -177,8 +188,7 @@
                 'An external tool was interrupted. Its outcome is unknown; verify the target system before retrying.';
         }
         session.snapshot!.activeRun = undefined;
-        activeRunId = '';
-        activeTriggerMessageId = '';
+        runStates.delete(session.id);
     }
 
     async function handleRunFinish(
@@ -189,11 +199,12 @@
     ): Promise<void> {
         const pendingApproval = hasPendingApproval(message);
         await sessionStore.persistMessage(session.id, message, isAbort || isError);
-        if (activeRunId) {
+        const run = runStates.get(session.id);
+        if (run) {
             await sessionStore.updateRun(
                 session.id,
-                activeRunId,
-                activeTriggerMessageId,
+                run.runId,
+                run.triggerMessageId,
                 session.mode,
                 pendingApproval
                     ? 'awaiting-approval'
@@ -205,11 +216,17 @@
                 isError ? 'The response failed.' : undefined,
             );
             if (!pendingApproval) {
-                activeRunId = '';
-                activeTriggerMessageId = '';
+                runStates.delete(session.id);
             }
         }
-        if (activeChat) sessionStore.syncFromChat(activeChat);
+        if (
+            pendingSettingsRefresh.has(session.id) &&
+            session.id === activeSessionId &&
+            !pendingApproval
+        ) {
+            pendingSettingsRefresh.delete(session.id);
+            scheduleMcpRefresh(session);
+        }
     }
 
     function hasPendingApproval(message: LavaUIMessage): boolean {
@@ -250,6 +267,25 @@
         void initializeChat(sessionStore.getActiveSession());
     }
 
+    function scheduleMcpRefresh(session: ChatSession): void {
+        if (settingsRefreshTimer !== undefined) {
+            window.clearTimeout(settingsRefreshTimer);
+        }
+        const sessionId = session.id;
+        settingsRefreshTimer = window.setTimeout(() => {
+            settingsRefreshTimer = undefined;
+            if (
+                sessionId !== activeSessionId ||
+                sessionStore.getActiveSessionId() !== sessionId ||
+                session.mode !== 'agent'
+            ) {
+                return;
+            }
+            if (activeChat) sessionStore.syncFromChat(activeChat, sessionId);
+            void initializeChat(session);
+        }, 150);
+    }
+
     async function handleToolApproval(
         part: LavaUIMessage['parts'][number],
         approved: boolean,
@@ -258,14 +294,27 @@
         if (!activeChat || !isToolUIPart(part) || part.state !== 'approval-requested') return;
         const toolName = getToolName(part);
         const descriptor = connectedTools.find((tool) => tool.id === toolName);
-        if (approved && descriptor && scope === 'conversation') {
+        const currentTool = descriptor
+            ? mcpSettings
+                  .getServer(descriptor.serverId)
+                  ?.tools.find((tool) => tool.name === descriptor.toolName)
+            : undefined;
+        const canApprove =
+            approved &&
+            (!descriptor ||
+                (currentTool?.policy !== 'blocked' &&
+                    currentTool?.fingerprint === descriptor.fingerprint));
+        if (approved && !canApprove) {
+            new Notice('This tool changed or was blocked. The request was denied.');
+        }
+        if (canApprove && descriptor && scope === 'conversation') {
             await sessionStore.setConversationGrant(activeSessionId, {
                 serverId: descriptor.serverId,
                 toolName: descriptor.toolName,
                 fingerprint: descriptor.fingerprint,
             });
         }
-        if (approved && descriptor && scope === 'always') {
+        if (canApprove && descriptor && scope === 'always') {
             await mcpSettings.setToolPolicy(
                 descriptor.serverId,
                 descriptor.toolName,
@@ -276,8 +325,8 @@
         }
         await activeChat.addToolApprovalResponse({
             id: part.approval.id,
-            approved,
-            reason: approved ? undefined : 'Denied by the user.',
+            approved: canApprove,
+            reason: canApprove ? undefined : 'Denied by the user or current policy.',
         });
     }
 
@@ -313,8 +362,6 @@
         if (!session) return;
         activeSessionId = session.id;
         activeChat = undefined;
-        activeRunId = '';
-        activeTriggerMessageId = '';
         await initializeChat(session);
         refreshSessions();
     }
@@ -324,8 +371,6 @@
         const session = sessionStore.createSession();
         activeSessionId = session.id;
         activeChat = undefined;
-        activeRunId = '';
-        activeTriggerMessageId = '';
         await initializeChat(session);
         refreshSessions();
     }
@@ -335,15 +380,25 @@
         refreshSessions();
     }
 
+    async function handleBeforeRetry(): Promise<void> {
+        const session = sessionStore.getActiveSession();
+        const trigger = [...(activeChat?.messages ?? [])]
+            .reverse()
+            .find((message) => message.role === 'user');
+        if (!trigger) return;
+        runStates.set(session.id, {
+            triggerMessageId: trigger.id,
+            runId: await sessionStore.startRun(session.id, trigger.id, session.mode),
+        });
+    }
+
     async function handleUserMessageSent(message: LavaUIMessage) {
         await sessionStore.appendCompletedMessage(activeSessionId, message);
         const session = sessionStore.getActiveSession();
-        activeTriggerMessageId = message.id;
-        activeRunId = await sessionStore.startRun(
-            activeSessionId,
-            message.id,
-            session.mode,
-        );
+        runStates.set(activeSessionId, {
+            triggerMessageId: message.id,
+            runId: await sessionStore.startRun(activeSessionId, message.id, session.mode),
+        });
         refreshSessions();
     }
 
@@ -389,9 +444,29 @@
                 authRequired = false;
             }
         });
+        const unsubscribeMcpSettings = mcpSettings.subscribe((change) => {
+            const session = sessionStore.getActiveSession();
+            if (session.mode !== 'agent') {
+                return;
+            }
+            if (chatLoading) {
+                if (change === 'configuration') pendingSettingsRefresh.add(session.id);
+                return;
+            }
+            if (!activeChat || isChatBusy(activeChat) || chatHasPendingApproval()) {
+                pendingSettingsRefresh.add(session.id);
+                return;
+            }
+            pendingSettingsRefresh.delete(session.id);
+            scheduleMcpRefresh(session);
+        });
         return () => {
             unsubscribeSessions();
             unsubscribeAuth();
+            unsubscribeMcpSettings();
+            if (settingsRefreshTimer !== undefined) {
+                window.clearTimeout(settingsRefreshTimer);
+            }
         };
     });
 
@@ -447,6 +522,7 @@
                     {authRequired}
                     onOpenAuth={onOpenAuth}
                     onBeforeSend={handleBeforeSend}
+                    onBeforeRetry={handleBeforeRetry}
                     onUserMessageSent={handleUserMessageSent}
                 />
             {/key}

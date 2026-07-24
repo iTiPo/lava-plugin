@@ -83,6 +83,60 @@ export function replayChatRecords(records: ChatRecord[]): SessionSnapshot {
     };
 }
 
+export function applyChatRecord(
+    snapshot: SessionSnapshot | undefined,
+    record: ChatRecord,
+): SessionSnapshot {
+    const next = snapshot ?? emptySessionSnapshot();
+    next.maxSeq = Math.max(next.maxSeq, record.seq);
+    next.recordCount += 1;
+
+    if (record.kind === 'message') {
+        const state = next.messageStates.get(record.message.id);
+        if (!state || record.seq >= state.seq) {
+            const index = next.messages.findIndex(
+                (message) => message.id === record.message.id,
+            );
+            if (index === -1) {
+                next.messages = [...next.messages, record.message];
+            } else {
+                next.messages = next.messages.map((message, messageIndex) =>
+                    messageIndex === index ? record.message : message,
+                );
+            }
+            next.messageStates.set(record.message.id, {
+                incomplete: record.incomplete ?? false,
+                seq: record.seq,
+            });
+        }
+    } else if (record.kind === 'run') {
+        const current = next.runs.get(record.runId);
+        if (!current || record.seq >= current.seq) next.runs.set(record.runId, record);
+    } else {
+        const current = next.toolOperations.get(record.operationId);
+        if (!current || record.seq >= current.seq) {
+            next.toolOperations.set(record.operationId, record);
+        }
+    }
+
+    next.activeRun = [...next.runs.values()]
+        .filter((run) => run.status === 'running' || run.status === 'awaiting-approval')
+        .sort((left, right) => right.seq - left.seq)[0];
+    return next;
+}
+
+export function emptySessionSnapshot(): SessionSnapshot {
+    return {
+        messages: [],
+        messageStates: new Map(),
+        runs: new Map(),
+        toolOperations: new Map(),
+        activeRun: undefined,
+        maxSeq: 0,
+        recordCount: 0,
+    };
+}
+
 function isChatRecord(value: Partial<ChatRecord>): value is ChatRecord {
     if (
         typeof value.seq !== 'number' ||

@@ -17,7 +17,10 @@ export interface CreateChatOptions {
     onFinish?: ChatInit<LavaUIMessage>['onFinish'];
     onError?: ChatInit<LavaUIMessage>['onError'];
     agent?: CreateLavaAgentOptions;
-    onBeforeAutomaticSend?: (messages: LavaUIMessage[]) => Promise<void>;
+    onApprovalStateChange?: (
+        messages: LavaUIMessage[],
+        willContinue: boolean,
+    ) => Promise<void>;
 }
 
 /**
@@ -36,8 +39,11 @@ export function createChat(
         onFinish: options?.onFinish,
         onError: options?.onError,
         sendAutomaticallyWhen: async ({ messages }) => {
-            await options?.onBeforeAutomaticSend?.(messages);
-            return lastAssistantMessageIsCompleteWithApprovalResponses({ messages });
+            const willContinue = lastAssistantMessageIsCompleteWithApprovalResponses({
+                messages,
+            });
+            await options?.onApprovalStateChange?.(messages, willContinue);
+            return willContinue;
         },
     });
 }

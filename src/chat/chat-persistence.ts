@@ -96,8 +96,6 @@ export class ChatPersistence {
             }
         }
 
-        const maxSeq = records.reduce((maximum, record) => Math.max(maximum, record.seq), 0);
-        this.nextSequences.set(sessionId, maxSeq + 1);
         return records;
     }
 
@@ -123,60 +121,17 @@ export class ChatPersistence {
     }
 
     async maybeCompact(sessionId: string): Promise<void> {
-        const snapshot = await this.loadSnapshot(sessionId);
-        if (snapshot.recordCount < COMPACT_RECORD_THRESHOLD) return;
-        await this.compactSession(sessionId, snapshot);
+        await this.enqueueWrite(sessionId, async () => {
+            const snapshot = replayChatRecords(await this.loadRecords(sessionId));
+            if (snapshot.recordCount < COMPACT_RECORD_THRESHOLD) return;
+            await this.writeCompactedSnapshot(sessionId, snapshot);
+        });
     }
 
-    async compactSession(
-        sessionId: string,
-        snapshot?: SessionSnapshot,
-    ): Promise<void> {
-        const resolvedSnapshot = snapshot ?? (await this.loadSnapshot(sessionId));
+    async compactSession(sessionId: string): Promise<void> {
         await this.enqueueWrite(sessionId, async () => {
-            const canonical: NewChatRecord[] = [
-                ...resolvedSnapshot.messages.map(
-                    (message): NewChatRecord => ({
-                        kind: 'message',
-                        message,
-                        incomplete: resolvedSnapshot.messageStates.get(message.id)?.incomplete,
-                    }),
-                ),
-                ...[...resolvedSnapshot.runs.values()].map(
-                    (record): NewChatRecord => stripRecordMetadata(record),
-                ),
-                ...[...resolvedSnapshot.toolOperations.values()].map(
-                    (record): NewChatRecord => stripRecordMetadata(record),
-                ),
-            ];
-            const now = Date.now();
-            const records = canonical.map(
-                (record, index): ChatRecord =>
-                    ({
-                        ...record,
-                        version: CHAT_RECORD_VERSION,
-                        seq: index + 1,
-                        recordedAt: now,
-                    }),
-            );
-            const path = this.sessionPath(sessionId);
-            const tempPath = `${path}.compact`;
-            const backupPath = `${path}.backup`;
-            const adapter = this.plugin.app.vault.adapter;
-            await adapter.write(
-                tempPath,
-                records.map((record) => JSON.stringify(record)).join('\n') + '\n',
-            );
-            if (await adapter.exists(backupPath)) await adapter.remove(backupPath);
-            if (await adapter.exists(path)) await adapter.rename(path, backupPath);
-            try {
-                await adapter.rename(tempPath, path);
-                if (await adapter.exists(backupPath)) await adapter.remove(backupPath);
-                this.nextSequences.set(sessionId, records.length + 1);
-            } catch (error) {
-                if (await adapter.exists(backupPath)) await adapter.rename(backupPath, path);
-                throw error;
-            }
+            const snapshot = replayChatRecords(await this.loadRecords(sessionId));
+            await this.writeCompactedSnapshot(sessionId, snapshot);
         });
     }
 
@@ -191,7 +146,12 @@ export class ChatPersistence {
 
     private async ensureSequenceInitialized(sessionId: string): Promise<void> {
         if (this.nextSequences.has(sessionId)) return;
-        await this.loadRecords(sessionId);
+        const records = await this.loadRecords(sessionId);
+        const maxSeq = records.reduce(
+            (maximum, record) => Math.max(maximum, record.seq),
+            0,
+        );
+        this.nextSequences.set(sessionId, maxSeq + 1);
     }
 
     private async enqueueWrite(sessionId: string, action: () => Promise<void>): Promise<void> {
@@ -204,6 +164,54 @@ export class ChatPersistence {
             if (this.writeQueues.get(sessionId) === next) {
                 this.writeQueues.delete(sessionId);
             }
+        }
+    }
+
+    private async writeCompactedSnapshot(
+        sessionId: string,
+        snapshot: SessionSnapshot,
+    ): Promise<void> {
+        const canonical: NewChatRecord[] = [
+            ...snapshot.messages.map(
+                (message): NewChatRecord => ({
+                    kind: 'message',
+                    message,
+                    incomplete: snapshot.messageStates.get(message.id)?.incomplete,
+                }),
+            ),
+            ...[...snapshot.runs.values()].map(
+                (record): NewChatRecord => stripRecordMetadata(record),
+            ),
+            ...[...snapshot.toolOperations.values()].map(
+                (record): NewChatRecord => stripRecordMetadata(record),
+            ),
+        ];
+        const now = Date.now();
+        const records = canonical.map(
+            (record, index): ChatRecord => ({
+                ...record,
+                version: CHAT_RECORD_VERSION,
+                seq: index + 1,
+                recordedAt: now,
+            }),
+        );
+        const path = this.sessionPath(sessionId);
+        const tempPath = `${path}.compact`;
+        const backupPath = `${path}.backup`;
+        const adapter = this.plugin.app.vault.adapter;
+        await adapter.write(
+            tempPath,
+            records.map((record) => JSON.stringify(record)).join('\n') + '\n',
+        );
+        if (await adapter.exists(backupPath)) await adapter.remove(backupPath);
+        if (await adapter.exists(path)) await adapter.rename(path, backupPath);
+        try {
+            await adapter.rename(tempPath, path);
+            if (await adapter.exists(backupPath)) await adapter.remove(backupPath);
+            this.nextSequences.set(sessionId, records.length + 1);
+        } catch (error) {
+            if (await adapter.exists(backupPath)) await adapter.rename(backupPath, path);
+            throw error;
         }
     }
 }

@@ -40,6 +40,7 @@
         ) => Promise<void>;
         onOpenAuth?: () => void;
         onBeforeSend?: (text: string) => void;
+        onBeforeRetry?: () => Promise<void>;
         onUserMessageSent?: (message: LavaUIMessage) => Promise<void>;
     }
 
@@ -56,6 +57,7 @@
         onToolApproval,
         onOpenAuth,
         onBeforeSend,
+        onBeforeRetry,
         onUserMessageSent,
     }: Props = $props();
 
@@ -179,11 +181,12 @@
         void chat.stop();
     }
 
-    function handleRetry() {
+    async function handleRetry() {
         if (chat.status !== 'error') return;
         autoScrollEnabled = true;
         queueMicrotask(() => scrollToBottom(preferredScrollBehavior()));
-        void chat.regenerate();
+        await onBeforeRetry?.();
+        await chat.regenerate();
     }
 
     async function respondToApproval(
@@ -323,7 +326,9 @@
         if (part.state === 'approval-responded') {
             return part.approval.approved ? `Approved · ${name}` : `Denied · ${name}`;
         }
-        if (part.state === 'output-available') return `Completed · ${name}`;
+        if (part.state === 'output-available') {
+            return mcpOutputIsError(part.output) ? `Failed · ${name}` : `Completed · ${name}`;
+        }
         if (part.state === 'output-error') return `Failed · ${name}`;
         if (part.state === 'output-denied') return `Denied · ${name}`;
         return `Running · ${name}`;
@@ -386,6 +391,14 @@
             }
         }
         return undefined;
+    }
+
+    function mcpOutputIsError(value: unknown): boolean {
+        return (
+            Boolean(value) &&
+            typeof value === 'object' &&
+            (value as { isError?: unknown }).isError === true
+        );
     }
 
     function hasText(message: LavaUIMessage): boolean {
@@ -620,7 +633,7 @@
                                     <button
                                         type="button"
                                         class="lava-chat__work-retry"
-                                        onclick={handleRetry}
+                                        onclick={() => void handleRetry()}
                                         aria-label="Retry response"
                                     >
                                         Retry response
@@ -662,7 +675,7 @@
                                 <button
                                     type="button"
                                     class="lava-chat__work-retry"
-                                    onclick={handleRetry}
+                                    onclick={() => void handleRetry()}
                                     aria-label="Retry response"
                                 >
                                     Retry response

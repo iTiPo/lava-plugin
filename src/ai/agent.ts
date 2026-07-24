@@ -121,6 +121,8 @@ export function createLavaAgent(
             const value: unknown = isError
                 ? (toolOutput as { error: unknown }).error
                 : (toolOutput as { output: unknown }).output;
+            const applicationError = !isError && isMcpApplicationError(value);
+            const failed = isError || applicationError;
             await options.lifecycle.toolFinished({
                 operationId,
                 runId: run.runId,
@@ -128,9 +130,9 @@ export function createLavaAgent(
                 serverId: descriptor?.serverId,
                 toolName: descriptor?.toolName ?? toolCall.toolName,
                 authorization: authorizationFor(toolCall.toolName, policyContext()),
-                result: isError ? undefined : sanitizeToolValue(value),
-                error: isError ? errorMessage(value) : undefined,
-                externalReference: isError ? undefined : findExternalReference(value),
+                result: failed ? undefined : sanitizeToolValue(value),
+                error: failed ? errorMessage(value) : undefined,
+                externalReference: failed ? undefined : findExternalReference(value),
             });
         },
     });
@@ -154,5 +156,31 @@ function authorizationFor(
 }
 
 function errorMessage(value: unknown): string {
-    return value instanceof Error ? value.message : String(value);
+    if (value instanceof Error) return value.message;
+    if (value && typeof value === 'object') {
+        const result = value as { content?: unknown };
+        if (Array.isArray(result.content)) {
+            const text = result.content
+                .filter(
+                    (entry): entry is { type: 'text'; text: string } =>
+                        Boolean(entry) &&
+                        typeof entry === 'object' &&
+                        (entry as { type?: unknown }).type === 'text' &&
+                        typeof (entry as { text?: unknown }).text === 'string',
+                )
+                .map((entry) => entry.text)
+                .join('\n');
+            if (text) return text;
+        }
+        return 'The MCP server reported a tool error.';
+    }
+    return typeof value === 'string' ? value : 'Tool execution failed.';
+}
+
+function isMcpApplicationError(value: unknown): boolean {
+    return (
+        Boolean(value) &&
+        typeof value === 'object' &&
+        (value as { isError?: unknown }).isError === true
+    );
 }

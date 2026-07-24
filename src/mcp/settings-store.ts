@@ -1,6 +1,6 @@
 import { generateId } from 'ai';
 import type { Plugin } from 'obsidian';
-import type { LavaPluginData } from '../auth/auth-types';
+import { loadPluginData, updatePluginData } from '../plugin-data';
 import type {
     McpPluginData,
     McpServerConfig,
@@ -8,7 +8,8 @@ import type {
     McpToolPolicy,
 } from './types';
 
-type Listener = () => void;
+export type McpSettingsChange = 'configuration' | 'manifest';
+type Listener = (change: McpSettingsChange) => void;
 
 const MCP_SECRET_PREFIX = 'lava-plugin-mcp-';
 
@@ -19,8 +20,8 @@ export class McpSettingsStore {
     constructor(private readonly plugin: Plugin) {}
 
     async init(): Promise<void> {
-        const pluginData = (await this.plugin.loadData()) as LavaPluginData | null;
-        this.data = normalizeMcpData(pluginData?.mcp);
+        const pluginData = await loadPluginData(this.plugin);
+        this.data = normalizeMcpData(pluginData.mcp);
     }
 
     subscribe(listener: Listener): () => void {
@@ -46,13 +47,14 @@ export class McpSettingsStore {
             tools: [],
         };
         this.data.servers = [...this.data.servers, server];
-        await this.persist();
+        await this.persist('configuration');
         return cloneServer(server);
     }
 
     async updateServer(
         id: string,
         update: Partial<Omit<McpServerConfig, 'id'>>,
+        change: McpSettingsChange = 'configuration',
     ): Promise<void> {
         this.data.servers = this.data.servers.map((server) =>
             server.id === id
@@ -63,13 +65,13 @@ export class McpSettingsStore {
                   })
                 : server,
         );
-        await this.persist();
+        await this.persist(change);
     }
 
     async removeServer(id: string): Promise<void> {
         this.data.servers = this.data.servers.filter((server) => server.id !== id);
         this.plugin.app.secretStorage.setSecret(secretId(id), '');
-        await this.persist();
+        await this.persist('configuration');
     }
 
     getBearerToken(id: string): string | null {
@@ -78,6 +80,7 @@ export class McpSettingsStore {
 
     setBearerToken(id: string, token: string): void {
         this.plugin.app.secretStorage.setSecret(secretId(id), token.trim());
+        this.emit('configuration');
     }
 
     async setToolPolicy(
@@ -90,7 +93,7 @@ export class McpSettingsStore {
         server.tools = server.tools.map((tool) =>
             tool.name === toolName ? { ...tool, policy } : tool,
         );
-        await this.persist();
+        await this.persist('configuration');
     }
 
     async setAllToolPolicies(
@@ -103,16 +106,19 @@ export class McpSettingsStore {
             ...tool,
             policy: resolvePolicy(tool),
         }));
-        await this.persist();
+        await this.persist('configuration');
     }
 
-    private async persist(): Promise<void> {
-        const existing = ((await this.plugin.loadData()) as LavaPluginData | null) ?? {};
-        await this.plugin.saveData({
+    private async persist(change: McpSettingsChange): Promise<void> {
+        await updatePluginData(this.plugin, (existing) => ({
             ...existing,
             mcp: this.data,
-        });
-        for (const listener of this.listeners) listener();
+        }));
+        this.emit(change);
+    }
+
+    private emit(change: McpSettingsChange): void {
+        for (const listener of this.listeners) listener(change);
     }
 }
 

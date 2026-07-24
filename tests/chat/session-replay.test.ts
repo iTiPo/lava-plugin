@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { UIMessage } from 'ai';
 import { CHAT_RECORD_VERSION, type ChatRecord } from '../../src/chat/persistence-types';
-import { parseChatRecord, replayChatRecords } from '../../src/chat/session-replay';
+import {
+    applyChatRecord,
+    parseChatRecord,
+    replayChatRecords,
+} from '../../src/chat/session-replay';
 
 const userMessage: UIMessage = {
     id: 'user-1',
@@ -67,6 +71,18 @@ describe('chat record replay', () => {
         expect(snapshot.toolOperations.get('operation-1')?.status).toBe('succeeded');
         expect(snapshot.maxSeq).toBe(4);
     });
+
+    it('does not let late older records overwrite newer state', () => {
+        const completed = runRecord(2, 'completed');
+        const running = runRecord(1, 'running');
+        const snapshot = applyChatRecord(
+            applyChatRecord(undefined, completed),
+            running,
+        );
+
+        expect(snapshot.runs.get('run-1')?.status).toBe('completed');
+        expect(snapshot.activeRun).toBeUndefined();
+    });
 });
 
 function messageRecord(
@@ -86,7 +102,7 @@ function messageRecord(
 
 function runRecord(
     seq: number,
-    status: 'running' | 'awaiting-approval',
+    status: 'running' | 'awaiting-approval' | 'completed',
 ): ChatRecord {
     return {
         version: CHAT_RECORD_VERSION,

@@ -22,6 +22,7 @@ describe('MCP connection manager', () => {
                 raw += chunk;
             });
             request.on('end', () => {
+                expect(request.headers['x-test-token']).toBe('fixture-secret');
                 const message = raw ? (JSON.parse(raw) as RpcMessage) : undefined;
                 if (!message || !('id' in message)) {
                     response.writeHead(202).end();
@@ -79,6 +80,9 @@ describe('MCP connection manager', () => {
             name: 'Fixture',
             url: `http://127.0.0.1:${address.port}`,
             enabled: true,
+            headers: [
+                { id: 'h1', name: 'X-Test-Token', value: 'fixture-secret' },
+            ],
             tools: [],
         };
         const settings = new FakeSettings(config);
@@ -129,15 +133,17 @@ class FakeSettings {
     constructor(private config: McpServerConfig) {}
 
     listServers(): McpServerConfig[] {
-        return [{ ...this.config, tools: [...this.config.tools] }];
+        return [
+            {
+                ...this.config,
+                headers: this.config.headers.map((header) => ({ ...header })),
+                tools: [...this.config.tools],
+            },
+        ];
     }
 
     getServer(): McpServerConfig {
         return this.listServers()[0]!;
-    }
-
-    getBearerToken(): null {
-        return null;
     }
 
     async updateServer(

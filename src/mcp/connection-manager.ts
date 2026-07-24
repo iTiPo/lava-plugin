@@ -8,6 +8,7 @@ import type {
     McpServerConfig,
     McpToolManifestEntry,
 } from './types';
+import { headersToRecord } from './types';
 
 interface Connection {
     client: MCPClient;
@@ -85,12 +86,11 @@ export class McpConnectionManager {
         this.setStatus(serverId, 'connecting');
         let client: MCPClient | undefined;
         try {
-            const token = this.settings.getBearerToken(serverId);
             client = await createMCPClient({
                 transport: {
                     type: 'http',
                     url: server.url,
-                    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                    headers: headersToRecord(server.headers),
                     redirect: 'error',
                     fetch: window.fetch.bind(window),
                 },

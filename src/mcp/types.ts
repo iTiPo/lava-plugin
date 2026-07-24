@@ -7,6 +7,12 @@ export interface McpConversationGrant {
 	fingerprint: string;
 }
 
+export interface McpHttpHeader {
+	id: string;
+	name: string;
+	value: string;
+}
+
 export interface McpToolManifestEntry {
 	name: string;
 	title?: string;
@@ -21,6 +27,7 @@ export interface McpServerConfig {
 	name: string;
 	url: string;
 	enabled: boolean;
+	headers: McpHttpHeader[];
 	tools: McpToolManifestEntry[];
 	manifestUpdatedAt?: number;
 }
@@ -42,3 +49,16 @@ export interface ConnectedMcpTool {
 
 export type McpConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 export type ToolApprovalScope = 'once' | 'conversation' | 'always';
+
+/** Build request headers; empty names are skipped; later duplicates win. */
+export function headersToRecord(
+	headers: McpHttpHeader[],
+): Record<string, string> | undefined {
+	const result: Record<string, string> = {};
+	for (const header of headers) {
+		const name = header.name.trim();
+		if (!name) continue;
+		result[name] = header.value;
+	}
+	return Object.keys(result).length > 0 ? result : undefined;
+}

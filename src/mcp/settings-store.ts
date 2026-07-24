@@ -2,6 +2,7 @@ import { generateId } from 'ai';
 import type { Plugin } from 'obsidian';
 import { loadPluginData, updatePluginData } from '../plugin-data';
 import type {
+    McpHttpHeader,
     McpPluginData,
     McpServerConfig,
     McpToolManifestEntry,
@@ -11,6 +12,7 @@ import type {
 export type McpSettingsChange = 'configuration' | 'manifest';
 type Listener = (change: McpSettingsChange) => void;
 
+/** Legacy bearer-token secret ids from before custom headers. */
 const MCP_SECRET_PREFIX = 'lava-plugin-mcp-';
 
 export class McpSettingsStore {
@@ -22,6 +24,7 @@ export class McpSettingsStore {
     async init(): Promise<void> {
         const pluginData = await loadPluginData(this.plugin);
         this.data = normalizeMcpData(pluginData.mcp);
+        clearLegacyBearerSecrets(this.plugin, this.data.servers);
     }
 
     subscribe(listener: Listener): () => void {
@@ -44,6 +47,7 @@ export class McpSettingsStore {
             name: 'MCP server',
             url: '',
             enabled: true,
+            headers: [],
             tools: [],
         };
         this.data.servers = [...this.data.servers, server];
@@ -70,17 +74,35 @@ export class McpSettingsStore {
 
     async removeServer(id: string): Promise<void> {
         this.data.servers = this.data.servers.filter((server) => server.id !== id);
-        this.plugin.app.secretStorage.setSecret(secretId(id), '');
+        clearLegacyBearerSecret(this.plugin, id);
         await this.persist('configuration');
     }
 
-    getBearerToken(id: string): string | null {
-        return this.plugin.app.secretStorage.getSecret(secretId(id));
+    async addHeader(serverId: string): Promise<void> {
+        const server = this.data.servers.find((candidate) => candidate.id === serverId);
+        if (!server) return;
+        server.headers = [...server.headers, { id: generateId(), name: '', value: '' }];
+        await this.persist('configuration');
     }
 
-    setBearerToken(id: string, token: string): void {
-        this.plugin.app.secretStorage.setSecret(secretId(id), token.trim());
-        this.emit('configuration');
+    async updateHeader(
+        serverId: string,
+        headerId: string,
+        update: Partial<Pick<McpHttpHeader, 'name' | 'value'>>,
+    ): Promise<void> {
+        const server = this.data.servers.find((candidate) => candidate.id === serverId);
+        if (!server) return;
+        server.headers = server.headers.map((header) =>
+            header.id === headerId ? { ...header, ...update } : header,
+        );
+        await this.persist('configuration');
+    }
+
+    async removeHeader(serverId: string, headerId: string): Promise<void> {
+        const server = this.data.servers.find((candidate) => candidate.id === serverId);
+        if (!server) return;
+        server.headers = server.headers.filter((header) => header.id !== headerId);
+        await this.persist('configuration');
     }
 
     async setToolPolicy(
@@ -148,6 +170,7 @@ function normalizeServer(server: McpServerConfig): McpServerConfig {
         name: server.name.trim() || 'MCP server',
         url: server.url.trim(),
         enabled: server.enabled !== false,
+        headers: normalizeHeaders(server.headers),
         tools: Array.isArray(server.tools)
             ? server.tools.filter(isToolLike).map((tool) => ({
                   name: tool.name,
@@ -170,6 +193,21 @@ function normalizeServer(server: McpServerConfig): McpServerConfig {
     };
 }
 
+function normalizeHeaders(value: unknown): McpHttpHeader[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter(isHeaderLike).map((header) => ({
+        id: header.id.trim() || generateId(),
+        name: typeof header.name === 'string' ? header.name : '',
+        value: typeof header.value === 'string' ? header.value : '',
+    }));
+}
+
+function isHeaderLike(value: unknown): value is McpHttpHeader {
+    if (!value || typeof value !== 'object') return false;
+    const header = value as Partial<McpHttpHeader>;
+    return typeof header.id === 'string';
+}
+
 function isToolLike(value: unknown): value is McpToolManifestEntry {
     if (!value || typeof value !== 'object') return false;
     const tool = value as Partial<McpToolManifestEntry>;
@@ -179,10 +217,19 @@ function isToolLike(value: unknown): value is McpToolManifestEntry {
 function cloneServer(server: McpServerConfig): McpServerConfig {
     return {
         ...server,
+        headers: server.headers.map((header) => ({ ...header })),
         tools: server.tools.map((tool) => ({ ...tool })),
     };
 }
 
-function secretId(serverId: string): string {
+function clearLegacyBearerSecrets(plugin: Plugin, servers: McpServerConfig[]): void {
+    for (const server of servers) clearLegacyBearerSecret(plugin, server.id);
+}
+
+function clearLegacyBearerSecret(plugin: Plugin, serverId: string): void {
+    plugin.app.secretStorage.setSecret(legacyBearerSecretId(serverId), '');
+}
+
+function legacyBearerSecretId(serverId: string): string {
     return `${MCP_SECRET_PREFIX}${serverId}-bearer`.slice(0, 64);
 }

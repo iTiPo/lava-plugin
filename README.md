@@ -32,13 +32,13 @@ Every new conversation starts in **Chat** mode. In this mode, Lava can read note
 To use external tools:
 
 1. Open **Settings → Getlava** and add a Streamable HTTP MCP server.
-2. Enter an optional bearer token, then choose **Test and refresh** to discover tools.
+2. Add any HTTP headers the server needs (for example `Authorization`), then choose **Test and refresh** to discover tools.
 3. Set each tool to **Blocked**, **Ask**, or **Auto-run**.
 4. Switch the conversation to **Agent** mode.
 
 When a tool is set to **Ask**, Lava shows its exact input before execution. You can deny it, allow it once, allow it for the current conversation, or always allow that reviewed tool definition. Newly discovered or changed tool definitions return to **Ask**.
 
-The first MCP release supports Streamable HTTP and optional bearer tokens. OAuth, SSE, and stdio transports are not yet supported.
+The first MCP release supports Streamable HTTP with optional custom request headers. OAuth, SSE, and stdio transports are not yet supported.
 
 ## Privacy and data
 
@@ -46,7 +46,7 @@ Getlava needs a network connection to the Getlava service for sign-in and chat.
 
 - Chat messages and note content that you explicitly include in a conversation (for example via `@` mentions) are sent to the Getlava backend for inference.
 - In Agent mode, MCP tool arguments are sent directly from the plugin to the configured MCP server. Tool results are returned to the model so it can continue the conversation.
-- MCP bearer tokens are stored in Obsidian secret storage and are not included in model prompts or chat history.
+- MCP HTTP header values are stored in plugin data with the server configuration. They are sent only to that MCP server and are not included in model prompts or chat history.
 - The plugin does not silently upload your whole vault.
 - See [Terms of Use](https://getlava.me/terms) and [Privacy Policy](https://getlava.me/confidential) for full details.
 

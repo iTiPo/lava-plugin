@@ -1523,3 +1523,15 @@ If your plugin does not need CSS, delete this file.
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.lava-mcp-header-row .setting-item-control {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.4rem;
+}
+
+.lava-mcp-header-row .setting-item-control input[type='text'] {
+    width: 10.5rem;
+    min-width: 8rem;
+}
+

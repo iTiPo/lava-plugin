@@ -29,7 +29,9 @@ export class LavaSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Add MCP server')
-            .setDesc('Bearer authentication is optional. OAuth, SSE, and stdio are not supported yet.')
+            .setDesc(
+                'Optional HTTP headers can include Authorization. OAuth, SSE, and stdio are not supported yet.',
+            )
             .addButton((button) => {
                 button.setButtonText('Add server').setCta().onClick(async () => {
                     await this.lavaPlugin.mcpSettings.addServer();
@@ -73,18 +75,70 @@ export class LavaSettingTab extends PluginSettingTab {
                 });
             });
 
-        const currentToken = this.lavaPlugin.mcpSettings.getBearerToken(server.id) ?? '';
         new Setting(containerEl)
-            .setName('Bearer token')
-            .setDesc('Stored in Obsidian secret storage and never shown to the model.')
-            .addText((text) => {
-                text.inputEl.type = 'password';
-                text.setPlaceholder(currentToken ? 'Token saved' : 'Optional');
-                text.onChange((token) => {
-                    this.lavaPlugin.mcpSettings.setBearerToken(server.id, token);
-                    void this.lavaPlugin.mcpConnections.disconnect(server.id);
-                });
+            .setName('HTTP headers')
+            .setDesc(
+                'Sent with every request to this server. Add an Authorization header if the server requires one.',
+            )
+            .setHeading();
+
+        if (server.headers.length === 0) {
+            containerEl.createEl('p', {
+                text: 'No headers configured.',
+                cls: 'setting-item-description',
             });
+        }
+
+        for (const header of server.headers) {
+            new Setting(containerEl)
+                .setClass('lava-mcp-header-row')
+                .addText((text) => {
+                    text.setPlaceholder('Header name')
+                        .setValue(header.name)
+                        .onChange(async (name) => {
+                            await this.lavaPlugin.mcpSettings.updateHeader(
+                                server.id,
+                                header.id,
+                                { name },
+                            );
+                            await this.lavaPlugin.mcpConnections.disconnect(server.id);
+                        });
+                    text.inputEl.setAttr('aria-label', 'Header name');
+                })
+                .addText((text) => {
+                    text.setPlaceholder('Header value')
+                        .setValue(header.value)
+                        .onChange(async (value) => {
+                            await this.lavaPlugin.mcpSettings.updateHeader(
+                                server.id,
+                                header.id,
+                                { value },
+                            );
+                            await this.lavaPlugin.mcpConnections.disconnect(server.id);
+                        });
+                    text.inputEl.setAttr('aria-label', 'Header value');
+                })
+                .addExtraButton((button) => {
+                    button
+                        .setIcon('trash')
+                        .setTooltip('Remove header')
+                        .onClick(async () => {
+                            await this.lavaPlugin.mcpSettings.removeHeader(
+                                server.id,
+                                header.id,
+                            );
+                            await this.lavaPlugin.mcpConnections.disconnect(server.id);
+                            this.display();
+                        });
+                });
+        }
+
+        new Setting(containerEl).addButton((button) => {
+            button.setButtonText('Add header').onClick(async () => {
+                await this.lavaPlugin.mcpSettings.addHeader(server.id);
+                this.display();
+            });
+        });
 
         new Setting(containerEl)
             .setName('Connection')

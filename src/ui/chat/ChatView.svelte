@@ -738,29 +738,40 @@
                 <div class="lava-chat__mode-actions">
                     <div
                         class="lava-chat__mode-switch"
-                        role="group"
+                        role="radiogroup"
                         aria-label={
                             mode === 'agent'
                                 ? `Chat mode (${agentToolCounts.auto} auto, ${agentToolCounts.ask} ask)`
                                 : 'Chat mode'
                         }
                     >
-                        <button
-                            type="button"
+                        <label
+                            class="lava-chat__mode-option"
                             class:lava-chat__mode-option--active={mode === 'chat'}
-                            aria-pressed={mode === 'chat'}
-                            onclick={() => onModeChange?.('chat')}
                         >
+                            <input
+                                type="radio"
+                                name="lava-chat-mode"
+                                value="chat"
+                                checked={mode === 'chat'}
+                                onchange={() => onModeChange?.('chat')}
+                            />
                             Chat
-                        </button>
-                        <button
-                            type="button"
+                        </label>
+                        <span class="lava-chat__mode-divider" aria-hidden="true"></span>
+                        <label
+                            class="lava-chat__mode-option"
                             class:lava-chat__mode-option--active={mode === 'agent'}
-                            aria-pressed={mode === 'agent'}
-                            onclick={() => onModeChange?.('agent')}
                         >
+                            <input
+                                type="radio"
+                                name="lava-chat-mode"
+                                value="agent"
+                                checked={mode === 'agent'}
+                                onchange={() => onModeChange?.('agent')}
+                            />
                             Agent
-                        </button>
+                        </label>
                     </div>
                 </div>
                 <div class="lava-chat__actions">

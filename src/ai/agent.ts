@@ -1,6 +1,14 @@
-import { ToolLoopAgent } from 'ai';
+import { ToolLoopAgent, type ToolSet } from 'ai';
 import type { App } from 'obsidian';
 import type { AuthStore } from '../auth/auth-store';
+import type { ConversationToolGrant } from '../chat/session-types';
+import type { ChatMode, ToolAuthorization } from '../chat/persistence-types';
+import {
+    resolveToolPolicy,
+    type ToolPolicyContext,
+} from '../mcp/approval-policy';
+import { findExternalReference, sanitizeToolValue } from '../mcp/output';
+import type { ConnectedMcpTool } from '../mcp/types';
 import { buildModel } from './provider';
 import { createReadNoteTool } from './tools/read-note';
 
@@ -17,12 +25,134 @@ If the user asks about a specific note without @mention, ask which note they mea
 ## Limits
 You cannot create, edit, or delete notes. Only treat note content as known when readNote succeeded in this conversation.`;
 
-export function createLavaAgent(app: App, authStore: AuthStore) {
+const AGENT_MODE_INSTRUCTIONS = `${LAVA_SYSTEM_INSTRUCTIONS}
+
+## External tools
+You are in Agent mode. You may use the available external tools when they directly help complete the user's request. Before calling a tool, choose the target and arguments carefully. Never claim an external action succeeded until its tool result confirms it.`;
+
+export interface AgentRunReference {
+    sessionId: string;
+    runId: string;
+}
+
+export interface LavaAgentLifecycle {
+    currentRun: () => AgentRunReference | undefined;
+    toolStarted: (operation: {
+        operationId: string;
+        runId: string;
+        toolCallId: string;
+        serverId?: string;
+        toolName: string;
+        authorization: ToolAuthorization;
+        input: unknown;
+    }) => Promise<void>;
+    toolFinished: (operation: {
+        operationId: string;
+        runId: string;
+        toolCallId: string;
+        serverId?: string;
+        toolName: string;
+        authorization: ToolAuthorization;
+        result?: unknown;
+        error?: string;
+        externalReference?: string;
+    }) => Promise<void>;
+}
+
+export interface CreateLavaAgentOptions {
+    mode: ChatMode;
+    mcpTools?: ToolSet;
+    descriptors?: ConnectedMcpTool[];
+    conversationGrants?: ConversationToolGrant[] | (() => ConversationToolGrant[]);
+    lifecycle?: LavaAgentLifecycle;
+}
+
+export function createLavaAgent(
+    app: App,
+    authStore: AuthStore,
+    options: CreateLavaAgentOptions = { mode: 'chat' },
+) {
+    const descriptors = options.descriptors ?? [];
+    const policyContext = (): ToolPolicyContext => ({
+        mode: options.mode,
+        tools: descriptors,
+        conversationGrants:
+            typeof options.conversationGrants === 'function'
+                ? options.conversationGrants()
+                : (options.conversationGrants ?? []),
+    });
+    const tools: ToolSet = {
+        readNote: createReadNoteTool(app),
+        ...(options.mode === 'agent' ? options.mcpTools : {}),
+    };
+
     return new ToolLoopAgent({
         model: buildModel(authStore),
-        instructions: LAVA_SYSTEM_INSTRUCTIONS,
-        tools: {
-            readNote: createReadNoteTool(app),
+        instructions:
+            options.mode === 'agent' ? AGENT_MODE_INSTRUCTIONS : LAVA_SYSTEM_INSTRUCTIONS,
+        tools,
+        toolApproval: ({ toolCall }) =>
+            resolveToolPolicy(toolCall.toolName, policyContext()) === 'ask'
+                ? 'user-approval'
+                : 'not-applicable',
+        onToolExecutionStart: async ({ toolCall }) => {
+            if (toolCall.toolName === 'readNote' || !options.lifecycle) return;
+            const run = options.lifecycle.currentRun();
+            if (!run) return;
+            const descriptor = descriptors.find((tool) => tool.id === toolCall.toolName);
+            const operationId = `${run.runId}:${toolCall.toolCallId}`;
+            await options.lifecycle.toolStarted({
+                operationId,
+                runId: run.runId,
+                toolCallId: toolCall.toolCallId,
+                serverId: descriptor?.serverId,
+                toolName: descriptor?.toolName ?? toolCall.toolName,
+                authorization: authorizationFor(toolCall.toolName, policyContext()),
+                input: sanitizeToolValue(toolCall.input),
+            });
+        },
+        onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
+            if (toolCall.toolName === 'readNote' || !options.lifecycle) return;
+            const run = options.lifecycle.currentRun();
+            if (!run) return;
+            const descriptor = descriptors.find((tool) => tool.id === toolCall.toolName);
+            const operationId = `${run.runId}:${toolCall.toolCallId}`;
+            const isError = toolOutput.type === 'tool-error';
+            const value: unknown = isError
+                ? (toolOutput as { error: unknown }).error
+                : (toolOutput as { output: unknown }).output;
+            await options.lifecycle.toolFinished({
+                operationId,
+                runId: run.runId,
+                toolCallId: toolCall.toolCallId,
+                serverId: descriptor?.serverId,
+                toolName: descriptor?.toolName ?? toolCall.toolName,
+                authorization: authorizationFor(toolCall.toolName, policyContext()),
+                result: isError ? undefined : sanitizeToolValue(value),
+                error: isError ? errorMessage(value) : undefined,
+                externalReference: isError ? undefined : findExternalReference(value),
+            });
         },
     });
+}
+
+function authorizationFor(
+    toolName: string,
+    context: ToolPolicyContext,
+): ToolAuthorization {
+    const descriptor = context.tools.find((tool) => tool.id === toolName);
+    if (!descriptor) return 'automatic';
+    const hasConversationGrant = context.conversationGrants.some(
+        (grant) =>
+            grant.serverId === descriptor.serverId &&
+            grant.toolName === descriptor.toolName &&
+            grant.fingerprint === descriptor.fingerprint,
+    );
+    if (hasConversationGrant) return 'conversation';
+    if (descriptor.policy === 'auto') return 'always';
+    return 'once';
+}
+
+function errorMessage(value: unknown): string {
+    return value instanceof Error ? value.message : String(value);
 }

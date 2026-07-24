@@ -1,7 +1,10 @@
 <script lang="ts">
     import type { Attachment } from 'svelte/attachments';
     import { setIcon, type App } from 'obsidian';
+    import { getToolName, isDynamicToolUIPart, isToolUIPart } from 'ai';
     import type { LavaChat, LavaUIMessage } from '../../ai/chat-factory';
+    import type { ChatMode } from '../../chat/persistence-types';
+    import type { ToolApprovalScope } from '../../mcp/types';
     import { getNoteMentions, type LavaMessageMetadata } from '../../ai/chat-types';
     import { isAuthApiError } from '../../auth/auth-errors';
     import { NoteMentionSuggest } from '../../notes/note-mention-suggest';
@@ -25,6 +28,16 @@
         chat: LavaChat;
         isAuthenticated?: boolean;
         authRequired?: boolean;
+        mode?: ChatMode;
+        agentToolCounts?: { ask: number; auto: number };
+        hasConfiguredMcpServers?: boolean;
+        agentWarning?: string;
+        onModeChange?: (mode: ChatMode) => void;
+        onToolApproval?: (
+            part: LavaUIMessage['parts'][number],
+            approved: boolean,
+            scope?: ToolApprovalScope,
+        ) => Promise<void>;
         onOpenAuth?: () => void;
         onBeforeSend?: (text: string) => void;
         onUserMessageSent?: (message: LavaUIMessage) => Promise<void>;
@@ -35,6 +48,12 @@
         chat,
         isAuthenticated = false,
         authRequired = false,
+        mode = 'chat',
+        agentToolCounts = { ask: 0, auto: 0 },
+        hasConfiguredMcpServers = false,
+        agentWarning = '',
+        onModeChange,
+        onToolApproval,
         onOpenAuth,
         onBeforeSend,
         onUserMessageSent,
@@ -50,11 +69,22 @@
     let pendingNoteMention: NoteMention | undefined;
     let inputScrollTop = $state(0);
     let inputScrollLeft = $state(0);
+    let respondingApprovalIds = $state<string[]>([]);
 
     const isBusy = $derived(chat.status === 'streaming' || chat.status === 'submitted');
     const activeAssistantMessage = $derived(findAssistantResponse(chat.messages));
     const showResponsePlaceholder = $derived(
         !activeAssistantMessage && (isBusy || chat.status === 'error'),
+    );
+    const hasPendingApproval = $derived(
+        chat.messages.some((message) =>
+            message.parts.some(
+                (part) =>
+                    isToolUIPart(part) &&
+                    part.state === 'approval-requested' &&
+                    !part.approval.isAutomatic,
+            ),
+        ),
     );
     const inputSegments = $derived(splitNoteMentionText(input, selectedNoteMentions));
 
@@ -138,7 +168,7 @@
     function handleSubmit(event: SubmitEvent) {
         event.preventDefault();
         const { text, noteMentions } = getInputForSend();
-        if (!text || isBusy) return;
+        if (!text || isBusy || hasPendingApproval) return;
         void sendUserMessage(text, noteMentions);
         input = '';
         selectedNoteMentions = [];
@@ -156,11 +186,29 @@
         void chat.regenerate();
     }
 
+    async function respondToApproval(
+        part: ToolPart,
+        approved: boolean,
+        scope: ToolApprovalScope = 'once',
+    ): Promise<void> {
+        if (part.state !== 'approval-requested') return;
+        const id = part.approval.id;
+        if (respondingApprovalIds.includes(id)) return;
+        respondingApprovalIds = [...respondingApprovalIds, id];
+        try {
+            await onToolApproval?.(part, approved, scope);
+        } finally {
+            respondingApprovalIds = respondingApprovalIds.filter(
+                (candidate) => candidate !== id,
+            );
+        }
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             const { text, noteMentions } = getInputForSend();
-            if (!text || isBusy) return;
+            if (!text || isBusy || hasPendingApproval) return;
             void sendUserMessage(text, noteMentions);
             input = '';
             selectedNoteMentions = [];
@@ -236,11 +284,12 @@
                 if (part.type === 'text' || part.type === 'reasoning') {
                     void part.text;
                 }
-                if (part.type === 'reasoning' || part.type === 'tool-readNote') {
+                if (part.type === 'reasoning' || isToolUIPart(part)) {
                     void part.state;
                 }
-                if (part.type === 'tool-readNote') {
+                if (isToolUIPart(part)) {
                     void part.input;
+                    void part.approval;
                 }
             }
         }
@@ -261,17 +310,82 @@
         return splitNoteMentionText(text, getNoteMentions(message.metadata));
     }
 
-    type ReadNoteToolPart = Extract<
+    type ToolPart = Extract<
         LavaUIMessage['parts'][number],
-        { type: 'tool-readNote' }
+        { type: `tool-${string}` } | { type: 'dynamic-tool' }
     >;
 
-    function toolStatus(part: ReadNoteToolPart): string {
-        const path =
-            part.input && typeof part.input.path === 'string' ? part.input.path : 'note';
-        if (part.state === 'output-available') return `Read ${path}`;
-        if (part.state === 'output-error') return `Couldn’t read ${path}`;
-        return `Reading ${path}…`;
+    function toolStatus(part: ToolPart): string {
+        const name = toolDisplayName(part);
+        if (part.state === 'approval-requested' && !part.approval.isAutomatic) {
+            return `Approval required · ${name}`;
+        }
+        if (part.state === 'approval-responded') {
+            return part.approval.approved ? `Approved · ${name}` : `Denied · ${name}`;
+        }
+        if (part.state === 'output-available') return `Completed · ${name}`;
+        if (part.state === 'output-error') return `Failed · ${name}`;
+        if (part.state === 'output-denied') return `Denied · ${name}`;
+        return `Running · ${name}`;
+    }
+
+    function toolDisplayName(part: ToolPart): string {
+        if (isDynamicToolUIPart(part) && part.title) return part.title;
+        const metadata = toolMetadata(part);
+        return metadata?.toolName ?? getToolName(part);
+    }
+
+    function toolServerName(part: ToolPart): string | undefined {
+        return toolMetadata(part)?.serverName;
+    }
+
+    function toolMetadata(
+        part: ToolPart,
+    ): { serverName?: string; toolName?: string } | undefined {
+        const metadata = part.toolMetadata?.getlava;
+        if (!metadata || typeof metadata !== 'object') return undefined;
+        const value = metadata as Record<string, unknown>;
+        return {
+            serverName:
+                typeof value.serverName === 'string' ? value.serverName : undefined,
+            toolName: typeof value.toolName === 'string' ? value.toolName : undefined,
+        };
+    }
+
+    function formatToolValue(value: unknown): string {
+        if (value === undefined) return '';
+        try {
+            return JSON.stringify(value, null, 2);
+        } catch {
+            return String(value);
+        }
+    }
+
+    function toolExternalUrl(part: ToolPart): string | undefined {
+        if (part.state !== 'output-available') return undefined;
+        return findUrl(part.output);
+    }
+
+    function findUrl(value: unknown, depth = 0): string | undefined {
+        if (depth > 4) return undefined;
+        if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value;
+        if (Array.isArray(value)) {
+            for (const entry of value) {
+                const url = findUrl(entry, depth + 1);
+                if (url) return url;
+            }
+        } else if (value && typeof value === 'object') {
+            const object = value as Record<string, unknown>;
+            for (const key of ['url', 'html_url', 'uri']) {
+                const url = findUrl(object[key], depth + 1);
+                if (url) return url;
+            }
+            for (const entry of Object.values(object)) {
+                const url = findUrl(entry, depth + 1);
+                if (url) return url;
+            }
+        }
+        return undefined;
     }
 
     function hasText(message: LavaUIMessage): boolean {
@@ -287,12 +401,14 @@
     function activeToolStatus(message: LavaUIMessage): string | undefined {
         for (let i = message.parts.length - 1; i >= 0; i--) {
             const part = message.parts[i];
-            if (
-                part?.type === 'tool-readNote' &&
-                part.state !== 'output-available' &&
-                part.state !== 'output-error'
-            ) {
-                return toolStatus(part);
+            if (part && isToolUIPart(part)) {
+                if (
+                    part.state !== 'output-available' &&
+                    part.state !== 'output-error' &&
+                    part.state !== 'output-denied'
+                ) {
+                    return toolStatus(part);
+                }
             }
         }
         return undefined;
@@ -304,13 +420,13 @@
 
     function responseStatus(message?: LavaUIMessage): string {
         if (!message || isActiveResponse(message)) {
+            const tool = message ? activeToolStatus(message) : undefined;
+            if (tool) return tool;
             if (chat.status === 'error') return 'Something went wrong.';
             if (chat.status === 'submitted') {
                 return isSlowResponse ? 'Still working…' : 'Thinking…';
             }
             if (chat.status === 'streaming') {
-                const tool = message ? activeToolStatus(message) : undefined;
-                if (tool) return tool;
                 if (message && hasText(message)) return 'Writing response…';
                 if (message && hasStreamingReasoning(message)) return 'Thinking…';
                 return isSlowResponse ? 'Still working…' : 'Thinking…';
@@ -401,8 +517,94 @@
                                         </summary>
                                         <div class="lava-chat__reasoning-text">{part.text}</div>
                                     </details>
-                                {:else if part.type === 'tool-readNote'}
-                                    <div class="lava-chat__tool-status">{toolStatus(part)}</div>
+                                {:else if isToolUIPart(part)}
+                                    <div class="lava-chat__tool-card">
+                                        <div class="lava-chat__tool-card-header">
+                                            <span>{toolStatus(part)}</span>
+                                            {#if toolServerName(part)}
+                                                <span class="lava-chat__tool-server">
+                                                    {toolServerName(part)}
+                                                </span>
+                                            {/if}
+                                        </div>
+                                        {#if part.state === 'approval-requested' &&
+                                        !part.approval.isAutomatic}
+                                            <p class="lava-chat__tool-copy">
+                                                Review the exact input before this external tool runs.
+                                            </p>
+                                            <pre class="lava-chat__tool-value">{formatToolValue(
+                                                    part.input,
+                                                )}</pre>
+                                            <div class="lava-chat__tool-actions">
+                                                <button
+                                                    type="button"
+                                                    disabled={respondingApprovalIds.includes(
+                                                        part.approval.id,
+                                                    )}
+                                                    onclick={() =>
+                                                        void respondToApproval(part, false)}
+                                                >
+                                                    Deny
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="mod-cta"
+                                                    disabled={respondingApprovalIds.includes(
+                                                        part.approval.id,
+                                                    )}
+                                                    onclick={() =>
+                                                        void respondToApproval(part, true)}
+                                                >
+                                                    Allow once
+                                                </button>
+                                                <details class="lava-chat__tool-more">
+                                                    <summary>More</summary>
+                                                    <button
+                                                        type="button"
+                                                        onclick={() =>
+                                                            void respondToApproval(
+                                                                part,
+                                                                true,
+                                                                'conversation',
+                                                            )}
+                                                    >
+                                                        Allow for this chat
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onclick={() =>
+                                                            void respondToApproval(
+                                                                part,
+                                                                true,
+                                                                'always',
+                                                            )}
+                                                    >
+                                                        Always allow this tool
+                                                    </button>
+                                                </details>
+                                            </div>
+                                        {:else if part.state === 'output-error'}
+                                            <pre class="lava-chat__tool-value lava-chat__tool-value--error"
+                                                >{part.errorText}</pre
+                                            >
+                                        {:else if part.state === 'output-available' &&
+                                        getToolName(part) !== 'readNote'}
+                                            {#if toolExternalUrl(part)}
+                                                <a
+                                                    class="lava-chat__tool-link"
+                                                    href={toolExternalUrl(part)}
+                                                >
+                                                    Open result
+                                                </a>
+                                            {/if}
+                                            <details class="lava-chat__tool-details">
+                                                <summary>Details</summary>
+                                                <pre class="lava-chat__tool-value"
+                                                    >{formatToolValue(part.output)}</pre
+                                                >
+                                            </details>
+                                        {/if}
+                                    </div>
                                 {:else if part.type === 'text' && part.text}
                                     <div class="lava-chat__bubble lava-chat__bubble--markdown">
                                         {@html renderAssistantMarkdown(part.text)}
@@ -484,6 +686,41 @@
 
     {#if isAuthenticated}
         <form class="lava-chat__input-area" onsubmit={handleSubmit}>
+            <div class="lava-chat__mode-bar">
+                <div class="lava-chat__mode-switch" role="group" aria-label="Chat mode">
+                    <button
+                        type="button"
+                        class:lava-chat__mode-option--active={mode === 'chat'}
+                        aria-pressed={mode === 'chat'}
+                        onclick={() => onModeChange?.('chat')}
+                    >
+                        Chat
+                    </button>
+                    <button
+                        type="button"
+                        class:lava-chat__mode-option--active={mode === 'agent'}
+                        aria-pressed={mode === 'agent'}
+                        onclick={() => onModeChange?.('agent')}
+                    >
+                        Agent
+                    </button>
+                </div>
+                {#if mode === 'agent'}
+                    <span class="lava-chat__mode-summary">
+                        {agentToolCounts.auto} auto · {agentToolCounts.ask} ask
+                    </span>
+                {/if}
+            </div>
+            {#if mode === 'agent' && !hasConfiguredMcpServers}
+                <div class="lava-chat__agent-notice" role="status">
+                    Configure an MCP server in Settings → Getlava to add Agent tools.
+                </div>
+            {/if}
+            {#if agentWarning}
+                <div class="lava-chat__agent-notice lava-chat__agent-notice--warning" role="alert">
+                    {agentWarning}
+                </div>
+            {/if}
             <div class="lava-chat__input-wrapper">
                 <div class="lava-chat__input-backdrop" aria-hidden="true">
                     <div
@@ -524,7 +761,7 @@
                             type="submit"
                             class="lava-chat__send"
                             {@attach sendIcon}
-                            disabled={!input.trim()}
+                            disabled={!input.trim() || hasPendingApproval}
                             aria-label="Send"
                         ></button>
                     {/if}

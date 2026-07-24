@@ -1,8 +1,12 @@
 import { Chat } from '@ai-sdk/svelte';
-import { DirectChatTransport, type ChatInit } from 'ai';
+import {
+    DirectChatTransport,
+    lastAssistantMessageIsCompleteWithApprovalResponses,
+    type ChatInit,
+} from 'ai';
 import type { App } from 'obsidian';
 import type { AuthStore } from '../auth/auth-store';
-import { createLavaAgent } from './agent';
+import { createLavaAgent, type CreateLavaAgentOptions } from './agent';
 import type { LavaChat, LavaUIMessage } from './chat-types';
 
 export type { LavaChat, LavaUIMessage } from './chat-types';
@@ -12,6 +16,8 @@ export interface CreateChatOptions {
     messages?: LavaUIMessage[];
     onFinish?: ChatInit<LavaUIMessage>['onFinish'];
     onError?: ChatInit<LavaUIMessage>['onError'];
+    agent?: CreateLavaAgentOptions;
+    onBeforeAutomaticSend?: (messages: LavaUIMessage[]) => Promise<void>;
 }
 
 /**
@@ -22,12 +28,16 @@ export function createChat(
     authStore: AuthStore,
     options?: CreateChatOptions,
 ): LavaChat {
-    const agent = createLavaAgent(app, authStore);
+    const agent = createLavaAgent(app, authStore, options?.agent);
     return new Chat<LavaUIMessage>({
         id: options?.id,
         messages: options?.messages ?? [],
         transport: new DirectChatTransport({ agent }),
         onFinish: options?.onFinish,
         onError: options?.onError,
+        sendAutomaticallyWhen: async ({ messages }) => {
+            await options?.onBeforeAutomaticSend?.(messages);
+            return lastAssistantMessageIsCompleteWithApprovalResponses({ messages });
+        },
     });
 }

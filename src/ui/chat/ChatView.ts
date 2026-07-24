@@ -37,6 +37,8 @@ export class LavaChatView extends ItemView {
                 app: this.app,
                 sessionStore: this.plugin.chatSessions,
                 authStore: this.plugin.authStore,
+                mcpSettings: this.plugin.mcpSettings,
+                mcpConnections: this.plugin.mcpConnections,
                 config: this.plugin.config,
                 isReturningUser: this.plugin.isReturningUser,
             },

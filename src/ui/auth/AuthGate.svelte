@@ -5,6 +5,8 @@
     import type { AuthRoute } from '../../auth/auth-types';
     import type { ChatSessionStore } from '../../chat/session-store';
     import type { LavaConfig } from '../../config';
+    import type { McpConnectionManager } from '../../mcp/connection-manager';
+    import type { McpSettingsStore } from '../../mcp/settings-store';
     import ChatShell from '../chat/ChatShell.svelte';
     import AuthCheckEmail from './AuthCheckEmail.svelte';
     import AuthProfile from './AuthProfile.svelte';
@@ -14,11 +16,21 @@
         app: App;
         sessionStore: ChatSessionStore;
         authStore: AuthStore;
+        mcpSettings: McpSettingsStore;
+        mcpConnections: McpConnectionManager;
         config: LavaConfig;
         isReturningUser: boolean;
     }
 
-    let { app, sessionStore, authStore, config, isReturningUser }: Props = $props();
+    let {
+        app,
+        sessionStore,
+        authStore,
+        mcpSettings,
+        mcpConnections,
+        config,
+        isReturningUser,
+    }: Props = $props();
 
     let route = $state<AuthRoute>('welcome');
     let ready = $state(false);
@@ -150,6 +162,8 @@
             {app}
             {sessionStore}
             {authStore}
+            {mcpSettings}
+            {mcpConnections}
             {showProfileIcon}
             onProfileClick={handleProfileClick}
             onOpenAuth={openAuth}

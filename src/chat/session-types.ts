@@ -1,12 +1,22 @@
 import type { LavaUIMessage } from '../ai/chat-types';
+import type { ChatMode, SessionSnapshot } from './persistence-types';
 
-export const CHAT_INDEX_VERSION = 1;
+export const CHAT_INDEX_VERSION = 2;
+
+export interface ConversationToolGrant {
+    serverId: string;
+    toolName: string;
+    fingerprint: string;
+}
 
 export interface ChatSessionMeta {
     id: string;
     title: string;
     createdAt: number;
     updatedAt: number;
+    mode: ChatMode;
+    toolGrants: ConversationToolGrant[];
+    storageVersion: 1 | 2;
 }
 
 export interface ChatIndex {
@@ -19,6 +29,7 @@ export interface ChatSession extends ChatSessionMeta {
     messages: LavaUIMessage[];
     messagesLoaded: boolean;
     persisted: boolean;
+    snapshot?: SessionSnapshot;
 }
 
 export const DEFAULT_SESSION_TITLE = 'New chat';

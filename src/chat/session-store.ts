@@ -1,11 +1,18 @@
 import type { LavaChat, LavaUIMessage } from '../ai/chat-types';
 import { generateId } from 'ai';
 import type { ChatPersistence } from './chat-persistence';
+import type {
+    ChatMode,
+    RunStatus,
+    ToolAuthorization,
+    ToolOperationStatus,
+} from './persistence-types';
 import {
     DEFAULT_SESSION_TITLE,
     type ChatIndex,
     type ChatSession,
     type ChatSessionMeta,
+    type ConversationToolGrant,
     titleFromFirstMessage,
 } from './session-types';
 
@@ -17,7 +24,6 @@ export class ChatSessionStore {
     private listeners = new Set<Listener>();
     private pendingNewChat = false;
     private index: ChatIndex;
-    private readonly persistedMessageIds = new Map<string, Set<string>>();
 
     private constructor(
         private readonly persistence: ChatPersistence,
@@ -40,6 +46,7 @@ export class ChatSessionStore {
                 messages: [],
                 messagesLoaded: false,
                 persisted: true,
+                snapshot: undefined,
             });
         }
 
@@ -68,15 +75,6 @@ export class ChatSessionStore {
         for (const listener of this.listeners) {
             listener();
         }
-    }
-
-    private getPersistedIds(sessionId: string): Set<string> {
-        let ids = this.persistedMessageIds.get(sessionId);
-        if (!ids) {
-            ids = new Set();
-            this.persistedMessageIds.set(sessionId, ids);
-        }
-        return ids;
     }
 
     listSessions(): ChatSession[] {
@@ -138,8 +136,12 @@ export class ChatSessionStore {
             messages: [],
             createdAt: now,
             updatedAt: now,
+            mode: 'chat',
+            toolGrants: [],
+            storageVersion: 2,
             messagesLoaded: true,
             persisted: false,
+            snapshot: undefined,
         };
         this.sessions.push(session);
         this.activeSessionId = session.id;
@@ -190,7 +192,6 @@ export class ChatSessionStore {
         const session = this.getSession(sessionId);
         if (!session || session.persisted || session.messages.length > 0) return;
         this.sessions = this.sessions.filter((s) => s.id !== sessionId);
-        this.persistedMessageIds.delete(sessionId);
         if (this.activeSessionId === sessionId) {
             const next = this.listSessions()[0];
             this.activeSessionId = next?.id ?? '';
@@ -201,26 +202,26 @@ export class ChatSessionStore {
         const session = this.getSession(sessionId);
         if (!session || session.messagesLoaded) return;
 
-        const messages = await this.persistence.loadMessages(sessionId);
-        session.messages = messages;
+        const snapshot = await this.persistence.loadSnapshot(sessionId);
+        session.messages = snapshot.messages;
+        session.snapshot = snapshot;
         session.messagesLoaded = true;
-
-        const ids = this.getPersistedIds(sessionId);
-        ids.clear();
-        for (const message of messages) {
-            ids.add(message.id);
-        }
     }
 
     async appendCompletedMessage(
         sessionId: string,
         message: LavaUIMessage,
     ): Promise<void> {
+        await this.persistMessage(sessionId, message, false);
+    }
+
+    async persistMessage(
+        sessionId: string,
+        message: LavaUIMessage,
+        incomplete = false,
+    ): Promise<void> {
         const session = this.getSession(sessionId);
         if (!session) return;
-
-        const persistedIds = this.getPersistedIds(sessionId);
-        if (persistedIds.has(message.id)) return;
 
         const now = Date.now();
         if (!session.persisted) {
@@ -232,14 +233,22 @@ export class ChatSessionStore {
             );
         }
 
-        await this.persistence.appendMessage(sessionId, message);
-        persistedIds.add(message.id);
-
-        if (!session.messages.some((m) => m.id === message.id)) {
+        const existingIndex = session.messages.findIndex((candidate) => candidate.id === message.id);
+        if (existingIndex === -1) {
             session.messages = [...session.messages, message];
+        } else {
+            session.messages = session.messages.map((candidate, index) =>
+                index === existingIndex ? message : candidate,
+            );
         }
+        await this.persistence.appendRecord(sessionId, {
+            kind: 'message',
+            message,
+            incomplete,
+        });
         session.messagesLoaded = true;
         session.updatedAt = now;
+        session.storageVersion = 2;
 
         this.index = {
             ...this.index,
@@ -249,6 +258,93 @@ export class ChatSessionStore {
         };
         await this.flushIndex();
         this.notify();
+    }
+
+    async setMode(sessionId: string, mode: ChatMode): Promise<void> {
+        const session = this.getSession(sessionId);
+        if (!session || session.mode === mode) return;
+        session.mode = mode;
+        session.updatedAt = Date.now();
+        if (session.persisted) await this.flushIndex();
+        this.notify();
+    }
+
+    async setConversationGrant(
+        sessionId: string,
+        grant: ConversationToolGrant,
+    ): Promise<void> {
+        const session = this.getSession(sessionId);
+        if (!session) return;
+        session.toolGrants = [
+            ...session.toolGrants.filter(
+                (candidate) =>
+                    candidate.serverId !== grant.serverId ||
+                    candidate.toolName !== grant.toolName,
+            ),
+            grant,
+        ];
+        session.updatedAt = Date.now();
+        if (session.persisted) await this.flushIndex();
+        this.notify();
+    }
+
+    async startRun(
+        sessionId: string,
+        triggerMessageId: string,
+        mode: ChatMode,
+    ): Promise<string> {
+        const runId = generateId();
+        await this.persistence.appendRecord(sessionId, {
+            kind: 'run',
+            runId,
+            triggerMessageId,
+            mode,
+            status: 'running',
+        });
+        return runId;
+    }
+
+    async updateRun(
+        sessionId: string,
+        runId: string,
+        triggerMessageId: string,
+        mode: ChatMode,
+        status: RunStatus,
+        error?: string,
+    ): Promise<void> {
+        await this.persistence.appendRecord(sessionId, {
+            kind: 'run',
+            runId,
+            triggerMessageId,
+            mode,
+            status,
+            error,
+        });
+        if (status !== 'running' && status !== 'awaiting-approval') {
+            void this.persistence.maybeCompact(sessionId);
+        }
+    }
+
+    async recordToolOperation(
+        sessionId: string,
+        operation: {
+            operationId: string;
+            runId: string;
+            toolCallId: string;
+            serverId?: string;
+            toolName: string;
+            status: ToolOperationStatus;
+            authorization: ToolAuthorization;
+            input?: unknown;
+            result?: unknown;
+            externalReference?: string;
+            error?: string;
+        },
+    ): Promise<void> {
+        await this.persistence.appendRecord(sessionId, {
+            kind: 'tool',
+            ...operation,
+        });
     }
 
     async flushIndex(): Promise<void> {
@@ -268,6 +364,9 @@ export class ChatSessionStore {
             title: session.title,
             createdAt: session.createdAt,
             updatedAt: session.updatedAt,
+            mode: session.mode,
+            toolGrants: session.toolGrants,
+            storageVersion: session.storageVersion,
         };
     }
 }

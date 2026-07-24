@@ -1,3 +1,5 @@
+import type { McpPluginData } from '../mcp/types';
+
 export type AuthStatus = 'unknown' | 'anonymous' | 'pending_email' | 'authenticated';
 
 export type AuthRoute = 'welcome' | 'check_email' | 'chats' | 'profile';
@@ -16,6 +18,7 @@ export interface PersistedAuthData {
 
 export interface LavaPluginData {
     auth?: PersistedAuthData;
+    mcp?: McpPluginData;
 }
 
 export interface MagicLinkParams {

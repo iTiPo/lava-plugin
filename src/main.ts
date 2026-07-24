@@ -5,11 +5,16 @@ import { isReturningUser } from './auth/returning-user';
 import { ChatPersistence } from './chat/chat-persistence';
 import { ChatSessionStore } from './chat/session-store';
 import { LavaChatView, VIEW_TYPE_LAVA_CHAT } from './ui/chat/ChatView';
+import { McpSettingsStore } from './mcp/settings-store';
+import { McpConnectionManager } from './mcp/connection-manager';
+import { LavaSettingTab } from './settings/LavaSettingTab';
 
 export default class LavaPlugin extends Plugin {
     config!: LavaConfig;
     chatSessions!: ChatSessionStore;
     authStore!: AuthStore;
+    mcpSettings!: McpSettingsStore;
+    mcpConnections!: McpConnectionManager;
     isReturningUser = false;
 
     async onload() {
@@ -22,6 +27,9 @@ export default class LavaPlugin extends Plugin {
         this.isReturningUser = isReturningUser(index);
         this.authStore = new AuthStore();
         await this.authStore.init(this, this.config);
+        this.mcpSettings = new McpSettingsStore(this);
+        await this.mcpSettings.init();
+        this.mcpConnections = new McpConnectionManager(this.mcpSettings);
 
         this.chatSessions = await ChatSessionStore.fromLoaded(persistence, index, {
             createDefaultSession:
@@ -29,6 +37,7 @@ export default class LavaPlugin extends Plugin {
         });
 
         this.registerView(VIEW_TYPE_LAVA_CHAT, (leaf) => new LavaChatView(leaf, this));
+        this.addSettingTab(new LavaSettingTab(this));
 
         this.registerObsidianProtocolHandler('getlava-auth-callback', (params) => {
             void this.authStore.completeMagicLink(params);
@@ -59,6 +68,7 @@ export default class LavaPlugin extends Plugin {
 
     onunload() {
         this.authStore?.dispose();
+        void this.mcpConnections?.closeAll();
         void this.chatSessions?.flushIndex();
     }
 

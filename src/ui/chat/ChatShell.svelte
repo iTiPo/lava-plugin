@@ -497,7 +497,7 @@
         {/if}
 
         {#if activeChat}
-            {#key `${activeSessionId}:${activeMode}`}
+            {#key activeSessionId}
                 <ChatView
                     {app}
                     chat={activeChat}

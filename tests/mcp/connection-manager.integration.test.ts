@@ -1,17 +1,8 @@
 import { createServer } from 'node:http';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { McpSettingsStore } from '../../src/mcp/settings-store';
 import { McpConnectionManager } from '../../src/mcp/connection-manager';
 import type { McpServerConfig } from '../../src/mcp/types';
-
-const originalWindow = globalThis.window;
-
-afterEach(() => {
-    Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: originalWindow,
-    });
-});
 
 describe('MCP connection manager', () => {
     it('discovers and calls a Streamable HTTP tool', async () => {
@@ -71,10 +62,6 @@ describe('MCP connection manager', () => {
         const address = server.address();
         if (!address || typeof address === 'string') throw new Error('Missing fixture port.');
 
-        Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: { fetch: globalThis.fetch.bind(globalThis) },
-        });
         const config: McpServerConfig = {
             id: 'fixture',
             name: 'Fixture',

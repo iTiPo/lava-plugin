@@ -38,7 +38,7 @@ To use external tools:
 
 When a tool is set to **Ask**, Lava shows its exact input before execution. You can deny it, allow it once, allow it for the current conversation, or always allow that reviewed tool definition. Newly discovered or changed tool definitions return to **Ask**.
 
-The first MCP release supports Streamable HTTP with optional custom request headers. OAuth, SSE, and stdio transports are not yet supported.
+The first MCP release supports Streamable HTTP with optional custom request headers. On desktop, MCP HTTP uses Node networking (not browser `fetch`) so remote servers are not blocked by CORS. OAuth, SSE, and stdio transports are not yet supported.
 
 ## Privacy and data
 

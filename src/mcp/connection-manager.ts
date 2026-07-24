@@ -9,6 +9,7 @@ import type {
     McpToolManifestEntry,
 } from './types';
 import { headersToRecord } from './types';
+import { nodeFetch } from './node-fetch';
 
 interface Connection {
     client: MCPClient;
@@ -92,7 +93,7 @@ export class McpConnectionManager {
                     url: server.url,
                     headers: headersToRecord(server.headers),
                     redirect: 'error',
-                    fetch: window.fetch.bind(window),
+                    fetch: nodeFetch,
                 },
                 clientName: 'getlava-obsidian',
                 version: '1.0.0',

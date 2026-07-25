@@ -30,6 +30,7 @@ export class McpConnectionManager {
     private readonly errors = new Map<string, string>();
     private readonly listeners = new Set<Listener>();
     private readonly generations = new Map<string, number>();
+    private readonly inFlight = new Map<string, Promise<Connection>>();
 
     constructor(private readonly settings: McpSettingsStore) {}
 
@@ -44,6 +45,24 @@ export class McpConnectionManager {
 
     getError(serverId: string): string {
         return this.errors.get(serverId) ?? '';
+    }
+
+    /** Connect every enabled server that has a URL. Skips live/in-flight connections. */
+    async connectEnabledServers(): Promise<void> {
+        const enabled = this.settings
+            .listServers()
+            .filter((server) => server.enabled && server.url.trim().length > 0);
+        await Promise.all(
+            enabled.map(async (server) => {
+                const status = this.getStatus(server.id);
+                if (status === 'connected' || status === 'connecting') return;
+                try {
+                    await this.connect(server.id);
+                } catch {
+                    // Status/error already recorded on the manager.
+                }
+            }),
+        );
     }
 
     async getAgentTools(): Promise<AgentMcpTools> {
@@ -77,6 +96,23 @@ export class McpConnectionManager {
     }
 
     async connect(serverId: string, refreshManifest = false): Promise<Connection> {
+        const existing = this.connections.get(serverId);
+        if (existing && !refreshManifest) return existing;
+
+        const pending = this.inFlight.get(serverId);
+        if (pending && !refreshManifest) return pending;
+
+        const run = this.openConnection(serverId, refreshManifest).finally(() => {
+            if (this.inFlight.get(serverId) === run) this.inFlight.delete(serverId);
+        });
+        this.inFlight.set(serverId, run);
+        return run;
+    }
+
+    private async openConnection(
+        serverId: string,
+        refreshManifest: boolean,
+    ): Promise<Connection> {
         const existing = this.connections.get(serverId);
         if (existing && !refreshManifest) return existing;
         const server = this.settings.getServer(serverId);
@@ -154,6 +190,7 @@ export class McpConnectionManager {
 
     async disconnect(serverId: string): Promise<void> {
         this.generations.set(serverId, (this.generations.get(serverId) ?? 0) + 1);
+        this.inFlight.delete(serverId);
         const connection = this.connections.get(serverId);
         this.connections.delete(serverId);
         if (connection) await connection.client.close().catch(() => undefined);

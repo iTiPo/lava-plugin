@@ -4,11 +4,24 @@ import type { McpServerConfig } from '../mcp/types';
 import { McpServerModal, hostLabel, statusLabel } from './McpServerModal';
 
 export class LavaSettingTab extends PluginSettingTab {
+	private unsubscribeConnections: (() => void) | undefined;
+	private statusRefreshTimer: number | undefined;
+	/** Servers we already tried to auto-connect during this settings visit. */
+	private readonly autoConnectAttempted = new Set<string>();
+	private refreshingFromStatus = false;
+
 	constructor(private readonly lavaPlugin: LavaPlugin) {
 		super(lavaPlugin.app, lavaPlugin);
 	}
 
 	display(): void {
+		this.ensureConnectionSubscription();
+
+		const servers = this.lavaPlugin.mcpSettings.listServers();
+		if (!this.refreshingFromStatus) {
+			this.kickOffAutoConnects(servers);
+		}
+
 		const { containerEl } = this;
 		containerEl.empty();
 
@@ -19,7 +32,6 @@ export class LavaSettingTab extends PluginSettingTab {
 			)
 			.setHeading();
 
-		const servers = this.lavaPlugin.mcpSettings.listServers();
 		const listEl = containerEl.createDiv({ cls: 'lava-mcp-server-list' });
 
 		if (servers.length === 0) {
@@ -42,6 +54,52 @@ export class LavaSettingTab extends PluginSettingTab {
 					this.openServerModal(server.id, { expandHeaders: true });
 				});
 			});
+	}
+
+	override hide(): void {
+		this.unsubscribeConnections?.();
+		this.unsubscribeConnections = undefined;
+		if (this.statusRefreshTimer !== undefined) {
+			window.clearTimeout(this.statusRefreshTimer);
+			this.statusRefreshTimer = undefined;
+		}
+		this.autoConnectAttempted.clear();
+		this.refreshingFromStatus = false;
+		super.hide();
+	}
+
+	private ensureConnectionSubscription(): void {
+		if (this.unsubscribeConnections) return;
+		this.unsubscribeConnections = this.lavaPlugin.mcpConnections.subscribe(() => {
+			if (this.statusRefreshTimer !== undefined) {
+				window.clearTimeout(this.statusRefreshTimer);
+			}
+			this.statusRefreshTimer = window.setTimeout(() => {
+				this.statusRefreshTimer = undefined;
+				this.refreshingFromStatus = true;
+				try {
+					this.display();
+				} finally {
+					this.refreshingFromStatus = false;
+				}
+			}, 50);
+		});
+	}
+
+	private kickOffAutoConnects(servers: McpServerConfig[]): void {
+		for (const server of servers) {
+			if (!server.enabled || !server.url.trim()) continue;
+			if (this.autoConnectAttempted.has(server.id)) continue;
+
+			const status = this.lavaPlugin.mcpConnections.getStatus(server.id);
+			if (status === 'connected' || status === 'connecting') {
+				this.autoConnectAttempted.add(server.id);
+				continue;
+			}
+
+			this.autoConnectAttempted.add(server.id);
+			void this.lavaPlugin.mcpConnections.connect(server.id).catch(() => undefined);
+		}
 	}
 
 	private renderServerRow(listEl: HTMLElement, server: McpServerConfig): void {
@@ -95,6 +153,7 @@ export class LavaSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						await this.lavaPlugin.mcpConnections.disconnect(server.id);
 						await this.lavaPlugin.mcpSettings.removeServer(server.id);
+						this.autoConnectAttempted.delete(server.id);
 						this.display();
 					});
 			})
@@ -102,7 +161,12 @@ export class LavaSettingTab extends PluginSettingTab {
 				toggle.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
 				toggle.setValue(server.enabled).onChange(async (enabled) => {
 					await this.lavaPlugin.mcpSettings.updateServer(server.id, { enabled });
-					if (!enabled) await this.lavaPlugin.mcpConnections.disconnect(server.id);
+					if (!enabled) {
+						await this.lavaPlugin.mcpConnections.disconnect(server.id);
+						this.autoConnectAttempted.delete(server.id);
+					} else {
+						this.autoConnectAttempted.delete(server.id);
+					}
 					this.display();
 				});
 			});

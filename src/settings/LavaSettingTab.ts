@@ -80,14 +80,6 @@ export class LavaSettingTab extends PluginSettingTab {
 		const actions = row.createDiv({ cls: 'lava-mcp-server-row__actions' });
 		new Setting(actions)
 			.setClass('lava-mcp-server-row__controls')
-			.addToggle((toggle) => {
-				toggle.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
-				toggle.setValue(server.enabled).onChange(async (enabled) => {
-					await this.lavaPlugin.mcpSettings.updateServer(server.id, { enabled });
-					if (!enabled) await this.lavaPlugin.mcpConnections.disconnect(server.id);
-					this.display();
-				});
-			})
 			.addButton((button) => {
 				button.setButtonText('Configure').onClick(() => {
 					this.openServerModal(server.id);
@@ -102,6 +94,14 @@ export class LavaSettingTab extends PluginSettingTab {
 						await this.lavaPlugin.mcpSettings.removeServer(server.id);
 						this.display();
 					});
+			})
+			.addToggle((toggle) => {
+				toggle.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
+				toggle.setValue(server.enabled).onChange(async (enabled) => {
+					await this.lavaPlugin.mcpSettings.updateServer(server.id, { enabled });
+					if (!enabled) await this.lavaPlugin.mcpConnections.disconnect(server.id);
+					this.display();
+				});
 			});
 	}
 

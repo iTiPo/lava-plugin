@@ -3,6 +3,7 @@ import type LavaPlugin from '../main';
 import type { McpConnectionStatus, McpServerConfig, McpToolPolicy } from '../mcp/types';
 
 export class LavaSettingTab extends PluginSettingTab {
+    private readonly expandedServers = new Set<string>();
     private readonly expandedHeaders = new Set<string>();
     private readonly expandedTools = new Set<string>();
 
@@ -40,6 +41,7 @@ export class LavaSettingTab extends PluginSettingTab {
             .addButton((button) => {
                 button.setButtonText('Add MCP server').setCta().onClick(async () => {
                     const server = await this.lavaPlugin.mcpSettings.addServer();
+                    this.expandedServers.add(server.id);
                     this.expandedHeaders.add(server.id);
                     this.display();
                 });
@@ -47,10 +49,14 @@ export class LavaSettingTab extends PluginSettingTab {
     }
 
     private renderServer(listEl: HTMLElement, server: McpServerConfig): void {
+        const expanded = this.expandedServers.has(server.id);
         const card = listEl.createDiv({ cls: 'lava-mcp-server' });
         if (!server.enabled) card.addClass('lava-mcp-server--disabled');
+        if (expanded) card.addClass('lava-mcp-server--expanded');
 
-        this.renderChrome(card, server);
+        this.renderChrome(card, server, expanded);
+
+        if (!expanded) return;
 
         const body = card.createDiv({ cls: 'lava-mcp-server__body' });
 
@@ -84,6 +90,7 @@ export class LavaSettingTab extends PluginSettingTab {
                     try {
                         const tools =
                             await this.lavaPlugin.mcpConnections.refreshServer(server.id);
+                        this.expandedServers.add(server.id);
                         this.expandedTools.add(server.id);
                         new Notice(`Connected. Discovered ${tools.length} tools.`);
                     } catch (error) {
@@ -100,9 +107,33 @@ export class LavaSettingTab extends PluginSettingTab {
         this.renderToolsSection(body, server);
     }
 
-    private renderChrome(card: HTMLElement, server: McpServerConfig): void {
+    private renderChrome(
+        card: HTMLElement,
+        server: McpServerConfig,
+        expanded: boolean,
+    ): void {
         const chrome = card.createDiv({ cls: 'lava-mcp-server__chrome' });
-        const identity = chrome.createDiv({ cls: 'lava-mcp-server__identity' });
+
+        const toggle = chrome.createEl('button', {
+            cls: 'lava-mcp-server__toggle',
+            attr: {
+                type: 'button',
+                'aria-expanded': String(expanded),
+                'aria-label': expanded
+                    ? `Collapse ${server.name.trim() || 'MCP server'}`
+                    : `Expand ${server.name.trim() || 'MCP server'}`,
+            },
+        });
+        toggle.addEventListener('click', () => {
+            if (expanded) this.expandedServers.delete(server.id);
+            else this.expandedServers.add(server.id);
+            this.display();
+        });
+
+        const chevron = toggle.createSpan({ cls: 'lava-mcp-server__chevron' });
+        setIcon(chevron, expanded ? 'chevron-down' : 'chevron-right');
+
+        const identity = toggle.createDiv({ cls: 'lava-mcp-server__identity' });
         identity.createDiv({
             text: server.name.trim() || 'MCP server',
             cls: 'lava-mcp-server__title',
@@ -133,11 +164,12 @@ export class LavaSettingTab extends PluginSettingTab {
         });
 
         const actions = chrome.createDiv({ cls: 'lava-mcp-server__actions' });
+        actions.addEventListener('click', (event) => event.stopPropagation());
         new Setting(actions)
             .setClass('lava-mcp-server__chrome-setting')
-            .addToggle((toggle) => {
-                toggle.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
-                toggle.setValue(server.enabled).onChange(async (enabled) => {
+            .addToggle((toggleControl) => {
+                toggleControl.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
+                toggleControl.setValue(server.enabled).onChange(async (enabled) => {
                     await this.lavaPlugin.mcpSettings.updateServer(server.id, { enabled });
                     if (!enabled) await this.lavaPlugin.mcpConnections.disconnect(server.id);
                     this.display();
@@ -150,6 +182,7 @@ export class LavaSettingTab extends PluginSettingTab {
                     .onClick(async () => {
                         await this.lavaPlugin.mcpConnections.disconnect(server.id);
                         await this.lavaPlugin.mcpSettings.removeServer(server.id);
+                        this.expandedServers.delete(server.id);
                         this.expandedHeaders.delete(server.id);
                         this.expandedTools.delete(server.id);
                         this.display();

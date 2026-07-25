@@ -356,10 +356,9 @@
         if (part.state === 'approval-responded') {
             return part.approval.approved ? `Approved · ${name}` : `Denied · ${name}`;
         }
-        if (part.state === 'output-available') {
-            return mcpOutputIsError(part.output) ? `Failed · ${name}` : `Completed · ${name}`;
+        if (part.state === 'output-available' || part.state === 'output-error') {
+            return `Completed · ${name}`;
         }
-        if (part.state === 'output-error') return `Failed · ${name}`;
         if (part.state === 'output-denied') return `Denied · ${name}`;
         return `Running · ${name}`;
     }
@@ -421,14 +420,6 @@
             }
         }
         return undefined;
-    }
-
-    function mcpOutputIsError(value: unknown): boolean {
-        return (
-            Boolean(value) &&
-            typeof value === 'object' &&
-            (value as { isError?: unknown }).isError === true
-        );
     }
 
     function hasText(message: LavaUIMessage): boolean {
@@ -620,9 +611,12 @@
                                                 </div>
                                             </div>
                                         {:else if part.state === 'output-error'}
-                                            <pre class="lava-chat__tool-value lava-chat__tool-value--error"
-                                                >{part.errorText}</pre
-                                            >
+                                            <details class="lava-chat__tool-details">
+                                                <summary>Details</summary>
+                                                <pre class="lava-chat__tool-value"
+                                                    >{part.errorText}</pre
+                                                >
+                                            </details>
                                         {:else if part.state === 'output-available' &&
                                         getToolName(part) !== 'readNote'}
                                             {#if toolExternalUrl(part)}

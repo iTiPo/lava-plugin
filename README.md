@@ -4,6 +4,8 @@ Getlava brings the ideas you have already captured into the conversation—so yo
 
 > 🔒 **Closed beta:** Getlava is currently in closed beta. To request access, leave your contact email on the [website](https://getlava.me).
 
+> 💬 **Discord:** Join the [Getlava community](https://discord.gg/cnWHtWVyjE).
+
 ## Features
 
 - **Chat in your vault** — open a dedicated chat view from the ribbon or command palette.

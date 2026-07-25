@@ -1,8 +1,11 @@
-import { Notice, PluginSettingTab, Setting } from 'obsidian';
+import { Notice, PluginSettingTab, Setting, setIcon } from 'obsidian';
 import type LavaPlugin from '../main';
-import type { McpServerConfig, McpToolPolicy } from '../mcp/types';
+import type { McpConnectionStatus, McpServerConfig, McpToolPolicy } from '../mcp/types';
 
 export class LavaSettingTab extends PluginSettingTab {
+    private readonly expandedHeaders = new Set<string>();
+    private readonly expandedTools = new Set<string>();
+
     constructor(private readonly lavaPlugin: LavaPlugin) {
         super(lavaPlugin.app, lavaPlugin);
     }
@@ -14,83 +17,180 @@ export class LavaSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName('MCP servers')
             .setDesc(
-                'Connect Streamable HTTP servers. Tools are available only in Agent mode.',
+                'Connect Streamable HTTP servers. Tools are available only in Agent mode. OAuth, SSE, and stdio are not supported yet.',
             )
             .setHeading();
 
         const servers = this.lavaPlugin.mcpSettings.listServers();
+        const listEl = containerEl.createDiv({ cls: 'lava-mcp-server-list' });
+
         if (servers.length === 0) {
-            containerEl.createEl('p', {
-                text: 'No MCP servers configured.',
+            const empty = listEl.createDiv({ cls: 'lava-mcp-empty' });
+            empty.createEl('p', {
+                text: 'No MCP servers yet. Add a Streamable HTTP endpoint, optional headers, then test the connection.',
                 cls: 'setting-item-description',
             });
+        } else {
+            for (const server of servers) this.renderServer(listEl, server);
         }
-        for (const server of servers) this.renderServer(server);
 
         new Setting(containerEl)
-            .setName('Add MCP server')
-            .setDesc(
-                'Optional HTTP headers can include Authorization. OAuth, SSE, and stdio are not supported yet.',
-            )
+            .setName('Add server')
+            .setDesc('Creates a new server card below. Configure the URL and headers, then test and refresh.')
             .addButton((button) => {
-                button.setButtonText('Add server').setCta().onClick(async () => {
-                    await this.lavaPlugin.mcpSettings.addServer();
+                button.setButtonText('Add MCP server').setCta().onClick(async () => {
+                    const server = await this.lavaPlugin.mcpSettings.addServer();
+                    this.expandedHeaders.add(server.id);
                     this.display();
                 });
             });
     }
 
-    private renderServer(server: McpServerConfig): void {
-        const { containerEl } = this;
-        new Setting(containerEl)
-            .setName(server.name)
-            .setDesc(this.statusDescription(server))
-            .setHeading();
+    private renderServer(listEl: HTMLElement, server: McpServerConfig): void {
+        const card = listEl.createDiv({ cls: 'lava-mcp-server' });
+        if (!server.enabled) card.addClass('lava-mcp-server--disabled');
 
-        new Setting(containerEl)
-            .setName('Enabled')
-            .setDesc('Disabled servers are disconnected and hidden from Agent mode.')
-            .addToggle((toggle) => {
-                toggle.setValue(server.enabled).onChange(async (enabled) => {
-                    await this.lavaPlugin.mcpSettings.updateServer(server.id, { enabled });
-                    if (!enabled) await this.lavaPlugin.mcpConnections.disconnect(server.id);
-                    this.display();
-                });
-            });
+        this.renderChrome(card, server);
 
-        new Setting(containerEl).setName('Name').addText((text) => {
+        const body = card.createDiv({ cls: 'lava-mcp-server__body' });
+
+        new Setting(body).setName('Name').addText((text) => {
             text.setValue(server.name).onChange(async (name) => {
                 await this.lavaPlugin.mcpSettings.updateServer(server.id, { name });
             });
         });
 
-        new Setting(containerEl)
-            .setName('Streamable HTTP URL')
-            .setDesc('Use an HTTPS endpoint, or localhost for local development.')
+        new Setting(body)
+            .setName('URL')
+            .setDesc('Streamable HTTP endpoint. Use HTTPS, or localhost for local development.')
             .addText((text) => {
                 text.setPlaceholder('https://example.com/mcp').setValue(server.url);
+                text.inputEl.addClass('lava-mcp-url-input');
                 text.onChange(async (url) => {
                     await this.lavaPlugin.mcpSettings.updateServer(server.id, { url });
                     await this.lavaPlugin.mcpConnections.disconnect(server.id);
                 });
             });
 
-        new Setting(containerEl)
-            .setName('HTTP headers')
-            .setDesc(
-                'Sent with every request to this server. Add an Authorization header if the server requires one.',
-            )
-            .setHeading();
+        this.renderHeadersSection(body, server);
+
+        const connectionError = this.lavaPlugin.mcpConnections.getError(server.id);
+        new Setting(body)
+            .setName('Connection')
+            .setDesc(connectionError || 'Test the endpoint and refresh the tool list.')
+            .addButton((button) => {
+                button.setButtonText('Test and refresh').onClick(async () => {
+                    button.setDisabled(true).setButtonText('Connecting…');
+                    try {
+                        const tools =
+                            await this.lavaPlugin.mcpConnections.refreshServer(server.id);
+                        this.expandedTools.add(server.id);
+                        new Notice(`Connected. Discovered ${tools.length} tools.`);
+                    } catch (error) {
+                        new Notice(
+                            error instanceof Error
+                                ? error.message
+                                : 'Could not connect to MCP server.',
+                        );
+                    }
+                    this.display();
+                });
+            });
+
+        this.renderToolsSection(body, server);
+    }
+
+    private renderChrome(card: HTMLElement, server: McpServerConfig): void {
+        const chrome = card.createDiv({ cls: 'lava-mcp-server__chrome' });
+        const identity = chrome.createDiv({ cls: 'lava-mcp-server__identity' });
+        identity.createDiv({
+            text: server.name.trim() || 'MCP server',
+            cls: 'lava-mcp-server__title',
+        });
+
+        const meta = identity.createDiv({ cls: 'lava-mcp-server__meta' });
+        const status = this.lavaPlugin.mcpConnections.getStatus(server.id);
+        const badge = meta.createSpan({
+            cls: `lava-mcp-status lava-mcp-status--${status}`,
+            text: statusLabel(status),
+        });
+        badge.setAttr('aria-label', `Connection status: ${statusLabel(status)}`);
+
+        const summaryParts = [hostLabel(server.url)];
+        if (server.tools.length > 0) {
+            summaryParts.push(
+                `${server.tools.length} tool${server.tools.length === 1 ? '' : 's'}`,
+            );
+        }
+        if (server.headers.length > 0) {
+            summaryParts.push(
+                `${server.headers.length} header${server.headers.length === 1 ? '' : 's'}`,
+            );
+        }
+        meta.createSpan({
+            cls: 'lava-mcp-server__summary',
+            text: summaryParts.filter(Boolean).join(' · '),
+        });
+
+        const actions = chrome.createDiv({ cls: 'lava-mcp-server__actions' });
+        new Setting(actions)
+            .setClass('lava-mcp-server__chrome-setting')
+            .addToggle((toggle) => {
+                toggle.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
+                toggle.setValue(server.enabled).onChange(async (enabled) => {
+                    await this.lavaPlugin.mcpSettings.updateServer(server.id, { enabled });
+                    if (!enabled) await this.lavaPlugin.mcpConnections.disconnect(server.id);
+                    this.display();
+                });
+            })
+            .addExtraButton((button) => {
+                button
+                    .setIcon('trash')
+                    .setTooltip('Remove server')
+                    .onClick(async () => {
+                        await this.lavaPlugin.mcpConnections.disconnect(server.id);
+                        await this.lavaPlugin.mcpSettings.removeServer(server.id);
+                        this.expandedHeaders.delete(server.id);
+                        this.expandedTools.delete(server.id);
+                        this.display();
+                    });
+            });
+    }
+
+    private renderHeadersSection(body: HTMLElement, server: McpServerConfig): void {
+        const expanded = this.expandedHeaders.has(server.id);
+        const section = body.createDiv({ cls: 'lava-mcp-section' });
+        this.renderSectionToggle(
+            section,
+            'Headers',
+            server.headers.length === 0
+                ? 'Optional request headers'
+                : `${server.headers.length} configured`,
+            expanded,
+            () => {
+                if (expanded) this.expandedHeaders.delete(server.id);
+                else this.expandedHeaders.add(server.id);
+                this.display();
+            },
+        );
+
+        if (!expanded) return;
+
+        const content = section.createDiv({ cls: 'lava-mcp-section__content' });
+        content.createEl('p', {
+            cls: 'lava-mcp-section__hint setting-item-description',
+            text: 'Sent with every request. Add an Authorization header if the server requires one.',
+        });
 
         if (server.headers.length === 0) {
-            containerEl.createEl('p', {
-                text: 'No headers configured.',
+            content.createEl('p', {
+                text: 'No headers yet.',
                 cls: 'setting-item-description',
             });
         }
 
         for (const header of server.headers) {
-            new Setting(containerEl)
+            new Setting(content)
                 .setClass('lava-mcp-header-row')
                 .addText((text) => {
                     text.setPlaceholder('Header name')
@@ -133,96 +233,131 @@ export class LavaSettingTab extends PluginSettingTab {
                 });
         }
 
-        new Setting(containerEl).addButton((button) => {
+        new Setting(content).addButton((button) => {
             button.setButtonText('Add header').onClick(async () => {
                 await this.lavaPlugin.mcpSettings.addHeader(server.id);
+                this.expandedHeaders.add(server.id);
                 this.display();
             });
         });
+    }
 
-        new Setting(containerEl)
-            .setName('Connection')
-            .setDesc(this.lavaPlugin.mcpConnections.getError(server.id) || 'Discover available tools.')
-            .addButton((button) => {
-                button.setButtonText('Test and refresh').onClick(async () => {
-                    button.setDisabled(true).setButtonText('Connecting…');
-                    try {
-                        const tools =
-                            await this.lavaPlugin.mcpConnections.refreshServer(server.id);
-                        new Notice(`Connected. Discovered ${tools.length} tools.`);
-                    } catch (error) {
-                        new Notice(
-                            error instanceof Error
-                                ? error.message
-                                : 'Could not connect to MCP server.',
+    private renderToolsSection(body: HTMLElement, server: McpServerConfig): void {
+        if (server.tools.length === 0) {
+            body.createEl('p', {
+                cls: 'lava-mcp-tools-empty setting-item-description',
+                text: 'No tools discovered yet. Run Test and refresh after the URL and headers are set.',
+            });
+            return;
+        }
+
+        const expanded = this.expandedTools.has(server.id);
+        const section = body.createDiv({ cls: 'lava-mcp-section' });
+        this.renderSectionToggle(
+            section,
+            'Tools',
+            `${server.tools.length} discovered`,
+            expanded,
+            () => {
+                if (expanded) this.expandedTools.delete(server.id);
+                else this.expandedTools.add(server.id);
+                this.display();
+            },
+        );
+
+        if (!expanded) return;
+
+        const content = section.createDiv({ cls: 'lava-mcp-section__content' });
+        content.createEl('p', {
+            cls: 'lava-mcp-section__hint setting-item-description',
+            text: 'Changed tool definitions always return to Ask.',
+        });
+
+        new Setting(content)
+            .setName('Defaults')
+            .setDesc('Apply a policy to every tool on this server.')
+            .addDropdown((dropdown) => {
+                dropdown
+                    .addOption('ask', 'Ask for all')
+                    .addOption('reads', 'Auto-run read-only hints')
+                    .addOption('auto', 'Auto-run all')
+                    .setValue('custom')
+                    .addOption('custom', 'Custom')
+                    .onChange(async (preset) => {
+                        await this.lavaPlugin.mcpSettings.setAllToolPolicies(
+                            server.id,
+                            (tool) => {
+                                if (preset === 'auto') return 'auto';
+                                if (preset === 'reads' && tool.readOnlyHint) return 'auto';
+                                return 'ask';
+                            },
                         );
-                    }
-                    this.display();
-                });
-            })
-            .addButton((button) => {
-                button.setButtonText('Remove').setWarning().onClick(async () => {
-                    await this.lavaPlugin.mcpConnections.disconnect(server.id);
-                    await this.lavaPlugin.mcpSettings.removeServer(server.id);
-                    this.display();
-                });
+                        await this.lavaPlugin.mcpConnections.disconnect(server.id);
+                        this.display();
+                    });
             });
 
-        if (server.tools.length > 0) {
-            new Setting(containerEl)
-                .setName('Tool defaults')
-                .setDesc('Changed tool definitions always return to Ask.')
+        for (const tool of server.tools) {
+            new Setting(content)
+                .setName(tool.title ?? tool.name)
+                .setDesc(
+                    `${tool.name}${tool.readOnlyHint ? ' · read-only hint' : ''}${tool.description ? ` — ${tool.description}` : ''}`,
+                )
                 .addDropdown((dropdown) => {
                     dropdown
-                        .addOption('ask', 'Ask for all')
-                        .addOption('reads', 'Auto-run read-only hints')
-                        .addOption('auto', 'Auto-run all')
-                        .setValue('custom')
-                        .addOption('custom', 'Custom')
-                        .onChange(async (preset) => {
-                            await this.lavaPlugin.mcpSettings.setAllToolPolicies(
+                        .addOption('blocked', 'Blocked')
+                        .addOption('ask', 'Ask')
+                        .addOption('auto', 'Auto-run')
+                        .setValue(tool.policy)
+                        .onChange(async (policy) => {
+                            await this.lavaPlugin.mcpSettings.setToolPolicy(
                                 server.id,
-                                (tool) => {
-                                    if (preset === 'auto') return 'auto';
-                                    if (preset === 'reads' && tool.readOnlyHint) return 'auto';
-                                    return 'ask';
-                                },
+                                tool.name,
+                                policy as McpToolPolicy,
                             );
                             await this.lavaPlugin.mcpConnections.disconnect(server.id);
-                            this.display();
                         });
                 });
-
-            for (const tool of server.tools) {
-                new Setting(containerEl)
-                    .setName(tool.title ?? tool.name)
-                    .setDesc(
-                        `${tool.name}${tool.readOnlyHint ? ' · read-only hint' : ''}${tool.description ? ` — ${tool.description}` : ''}`,
-                    )
-                    .addDropdown((dropdown) => {
-                        dropdown
-                            .addOption('blocked', 'Blocked')
-                            .addOption('ask', 'Ask')
-                            .addOption('auto', 'Auto-run')
-                            .setValue(tool.policy)
-                            .onChange(async (policy) => {
-                                await this.lavaPlugin.mcpSettings.setToolPolicy(
-                                    server.id,
-                                    tool.name,
-                                    policy as McpToolPolicy,
-                                );
-                                await this.lavaPlugin.mcpConnections.disconnect(server.id);
-                            });
-                    });
-            }
         }
     }
 
-    private statusDescription(server: McpServerConfig): string {
-        const status = this.lavaPlugin.mcpConnections.getStatus(server.id);
-        if (status === 'connected') return `${server.tools.length} tools · Connected`;
-        if (status === 'connecting') return 'Connecting…';
-        if (status === 'error') return 'Connection failed';
-        return `${server.tools.length} tools · Disconnected`;
+    private renderSectionToggle(
+        section: HTMLElement,
+        title: string,
+        subtitle: string,
+        expanded: boolean,
+        onToggle: () => void,
+    ): void {
+        const toggle = section.createEl('button', {
+            cls: 'lava-mcp-section__toggle',
+            attr: { type: 'button' },
+        });
+        toggle.setAttr('aria-expanded', String(expanded));
+
+        const chevron = toggle.createSpan({ cls: 'lava-mcp-section__chevron' });
+        setIcon(chevron, expanded ? 'chevron-down' : 'chevron-right');
+
+        const labels = toggle.createDiv({ cls: 'lava-mcp-section__labels' });
+        labels.createSpan({ cls: 'lava-mcp-section__title', text: title });
+        labels.createSpan({ cls: 'lava-mcp-section__subtitle', text: subtitle });
+
+        toggle.addEventListener('click', onToggle);
+    }
+}
+
+function statusLabel(status: McpConnectionStatus): string {
+    if (status === 'connected') return 'Connected';
+    if (status === 'connecting') return 'Connecting';
+    if (status === 'error') return 'Failed';
+    return 'Disconnected';
+}
+
+function hostLabel(url: string): string {
+    const trimmed = url.trim();
+    if (!trimmed) return 'No URL';
+    try {
+        return new URL(trimmed).host || trimmed;
+    } catch {
+        return trimmed;
     }
 }

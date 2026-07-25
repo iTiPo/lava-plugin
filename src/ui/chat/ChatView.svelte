@@ -35,8 +35,11 @@
         mode?: ChatMode;
         agentToolCounts?: { ask: number; auto: number };
         hasConfiguredMcpServers?: boolean;
+        agentToolsStatus?: 'idle' | 'connecting' | 'ready' | 'error';
+        agentToolsError?: string;
         agentWarning?: string;
         onModeChange?: (mode: ChatMode) => void;
+        onRetryAgentTools?: () => void;
         onToolApproval?: (
             part: LavaUIMessage['parts'][number],
             approved: boolean,
@@ -56,8 +59,11 @@
         mode = 'chat',
         agentToolCounts = { ask: 0, auto: 0 },
         hasConfiguredMcpServers = false,
+        agentToolsStatus = 'idle',
+        agentToolsError = '',
         agentWarning = '',
         onModeChange,
+        onRetryAgentTools,
         onToolApproval,
         onOpenAuth,
         onBeforeSend,
@@ -78,6 +84,9 @@
     let respondingApprovalIds = $state<string[]>([]);
 
     const isBusy = $derived(chat.status === 'streaming' || chat.status === 'submitted');
+    const agentToolsConnecting = $derived(
+        mode === 'agent' && agentToolsStatus === 'connecting',
+    );
     const activeAssistantMessage = $derived(findAssistantResponse(chat.messages));
     const showResponsePlaceholder = $derived(
         !activeAssistantMessage && (isBusy || chat.status === 'error'),
@@ -91,6 +100,9 @@
                     !part.approval.isAutomatic,
             ),
         ),
+    );
+    const canSend = $derived(
+        Boolean(input.trim()) && !hasPendingApproval && !agentToolsConnecting,
     );
     const inputSegments = $derived(splitNoteMentionText(input, selectedNoteMentions));
 
@@ -174,7 +186,7 @@
     function handleSubmit(event: SubmitEvent) {
         event.preventDefault();
         const { text, noteMentions } = getInputForSend();
-        if (!text || isBusy || hasPendingApproval) return;
+        if (!text || isBusy || hasPendingApproval || agentToolsConnecting) return;
         void sendUserMessage(text, noteMentions);
         input = '';
         selectedNoteMentions = [];
@@ -241,7 +253,7 @@
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             const { text, noteMentions } = getInputForSend();
-            if (!text || isBusy || hasPendingApproval) return;
+            if (!text || isBusy || hasPendingApproval || agentToolsConnecting) return;
             void sendUserMessage(text, noteMentions);
             input = '';
             selectedNoteMentions = [];
@@ -790,6 +802,25 @@
                             Agent
                         </label>
                     </div>
+                    {#if mode === 'agent' && agentToolsStatus === 'connecting'}
+                        <span class="lava-chat__tools-status" role="status">Connecting…</span>
+                    {:else if mode === 'agent' && agentToolsStatus === 'error'}
+                        <span
+                            class="lava-chat__tools-status lava-chat__tools-status--error"
+                            role="alert"
+                        >
+                            <span class="lava-chat__tools-status-text"
+                                >{agentToolsError || 'Could not connect tools.'}</span
+                            >
+                            <button
+                                type="button"
+                                class="lava-chat__tools-status-retry"
+                                onclick={() => onRetryAgentTools?.()}
+                            >
+                                Retry
+                            </button>
+                        </span>
+                    {/if}
                 </div>
                 <div class="lava-chat__actions">
                     {#if isBusy}
@@ -805,7 +836,7 @@
                             type="submit"
                             class="lava-chat__send"
                             {@attach sendIcon}
-                            disabled={!input.trim() || hasPendingApproval}
+                            disabled={!canSend}
                             aria-label="Send"
                         ></button>
                     {/if}

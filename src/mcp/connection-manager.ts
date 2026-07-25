@@ -118,6 +118,32 @@ export class McpConnectionManager {
                 }
             }),
         );
+        return this.assembleAgentTools(connections);
+    }
+
+    /** Already-open connections only — no network. Used to mount Agent chat immediately. */
+    getConnectedAgentTools(): AgentMcpTools {
+        const enabledIds = new Set(
+            this.settings.listServers().filter((server) => server.enabled).map((s) => s.id),
+        );
+        const connections = [...this.connections.entries()]
+            .filter(([serverId]) => enabledIds.has(serverId))
+            .map(([, connection]) => connection);
+        return this.assembleAgentTools(connections);
+    }
+
+    /** True when every enabled server with a URL is already connected. */
+    allEnabledServersConnected(): boolean {
+        const enabled = this.settings
+            .listServers()
+            .filter((server) => server.enabled && server.url.trim().length > 0);
+        if (enabled.length === 0) return true;
+        return enabled.every((server) => this.getStatus(server.id) === 'connected');
+    }
+
+    private assembleAgentTools(
+        connections: Array<Connection | undefined>,
+    ): AgentMcpTools {
         this.syncPoliciesFromSettings();
         const tools: ToolSet = {};
         const descriptors: ConnectedMcpTool[] = [];

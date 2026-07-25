@@ -654,14 +654,55 @@ If your plugin does not need CSS, delete this file.
 .lava-chat__mode-actions {
     position: absolute;
     left: 0.7rem;
+    right: 2.75rem;
     bottom: 0.65rem;
     z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
 }
 
 .lava-chat__mode-switch {
     display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;
     gap: 0.45rem;
+}
+
+.lava-chat__tools-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.2;
+}
+
+.lava-chat__tools-status--error {
+    color: var(--text-error);
+}
+
+.lava-chat__tools-status-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lava-chat__tools-status-retry {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-accent);
+    font-size: var(--font-ui-smaller);
+    cursor: pointer;
+}
+
+.lava-chat__tools-status-retry:hover {
+    color: var(--text-accent-hover);
 }
 
 .lava-chat__mode-option {

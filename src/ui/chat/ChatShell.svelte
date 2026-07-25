@@ -8,7 +8,7 @@
     import type { ChatSession } from '../../chat/session-types';
     import type { ChatSessionStore } from '../../chat/session-store';
     import type { ChatMode } from '../../domain/chat';
-    import type { McpConnectionManager } from '../../mcp/connection-manager';
+    import type { AgentMcpTools, McpConnectionManager } from '../../mcp/connection-manager';
     import { countToolPolicies } from '../../mcp/approval-policy';
     import type { McpSettingsStore } from '../../mcp/settings-store';
     import type { ConnectedMcpTool, ToolApprovalScope } from '../../mcp/types';
@@ -48,8 +48,8 @@
     let activeChat = $state<LavaChat | undefined>(undefined);
     let authRequired = $state(false);
     let isAuthenticated = $state(false);
-    let chatLoading = $state(false);
-    let chatLoadError = $state('');
+    let agentToolsStatus = $state<'idle' | 'connecting' | 'ready' | 'error'>('idle');
+    let agentToolsError = $state('');
     let connectedTools = $state<ConnectedMcpTool[]>([]);
     const runStates = new Map<string, { runId: string; triggerMessageId: string }>();
     let initializationId = 0;
@@ -71,20 +71,9 @@
         void authStore.clearSession();
     }
 
-    async function initializeChat(session: ChatSession): Promise<void> {
-        const requestId = ++initializationId;
-        chatLoading = true;
-        chatLoadError = '';
-        pendingSettingsRefresh.delete(session.id);
-        await recoverSessionRun(session);
-        try {
-            const mcp =
-                session.mode === 'agent'
-                    ? await mcpConnections.getAgentTools()
-                    : { tools: {}, descriptors: [] };
-            if (requestId !== initializationId) return;
-            connectedTools = mcp.descriptors;
-            activeChat = createChat(app, authStore, {
+    function mountChat(session: ChatSession, mcp: AgentMcpTools): void {
+        connectedTools = mcp.descriptors;
+        activeChat = createChat(app, authStore, {
             id: session.id,
             messages: session.messages,
             agent: {
@@ -131,19 +120,91 @@
                 }
             },
         });
+    }
+
+    async function initializeChat(session: ChatSession): Promise<void> {
+        const requestId = ++initializationId;
+        agentToolsError = '';
+        pendingSettingsRefresh.delete(session.id);
+        await recoverSessionRun(session);
+        if (requestId !== initializationId) return;
+
+        if (session.mode !== 'agent') {
+            agentToolsStatus = 'idle';
+            mountChat(session, { tools: {}, descriptors: [] });
+            return;
+        }
+
+        const warm = mcpConnections.getConnectedAgentTools();
+        mountChat(session, warm);
+
+        if (mcpConnections.allEnabledServersConnected()) {
+            agentToolsStatus = 'ready';
+            if (pendingSettingsRefresh.has(session.id)) {
+                pendingSettingsRefresh.delete(session.id);
+                scheduleMcpRefresh(session);
+            }
+            return;
+        }
+
+        agentToolsStatus = 'connecting';
+        void connectAgentToolsInBackground(session, requestId);
+    }
+
+    async function connectAgentToolsInBackground(
+        session: ChatSession,
+        requestId: number,
+    ): Promise<void> {
+        try {
+            const mcp = await mcpConnections.getAgentTools();
+            if (requestId !== initializationId) return;
+            if (session.id !== activeSessionId) return;
+            if (sessionStore.getActiveSessionId() !== session.id) return;
+            if (session.mode !== 'agent') return;
+
+            if (activeChat && (isChatBusy(activeChat) || chatHasPendingApproval())) {
+                pendingSettingsRefresh.add(session.id);
+                return;
+            }
+
+            if (activeChat) sessionStore.syncFromChat(activeChat, session.id);
+            mountChat(session, mcp);
+
+            const enabled = mcpSettings
+                .listServers()
+                .filter((server) => server.enabled && server.url.trim().length > 0);
+            const failed = enabled.filter(
+                (server) => mcpConnections.getStatus(server.id) === 'error',
+            );
+            if (mcp.descriptors.length === 0 && failed.length > 0) {
+                agentToolsStatus = 'error';
+                agentToolsError =
+                    mcpConnections.getError(failed[0]!.id) ||
+                    'Could not connect to MCP servers.';
+            } else {
+                agentToolsStatus = 'ready';
+                agentToolsError = '';
+            }
+
             if (pendingSettingsRefresh.has(session.id)) {
                 pendingSettingsRefresh.delete(session.id);
                 scheduleMcpRefresh(session);
             }
         } catch (error) {
             if (requestId !== initializationId) return;
-            activeChat = undefined;
-            connectedTools = [];
-            chatLoadError =
-                error instanceof Error ? error.message : 'Could not initialize Agent mode.';
-        } finally {
-            if (requestId === initializationId) chatLoading = false;
+            agentToolsStatus = 'error';
+            agentToolsError =
+                error instanceof Error ? error.message : 'Could not connect Agent tools.';
         }
+    }
+
+    function retryAgentTools(): void {
+        const session = sessionStore.getActiveSession();
+        if (session.mode !== 'agent') return;
+        const requestId = ++initializationId;
+        agentToolsStatus = 'connecting';
+        agentToolsError = '';
+        void connectAgentToolsInBackground(session, requestId);
     }
 
     async function recoverSessionRun(session: ChatSession): Promise<void> {
@@ -244,7 +305,7 @@
 
     async function changeMode(mode: ChatMode): Promise<void> {
         const session = sessionStore.getActiveSession();
-        if (session.mode === mode || chatLoading) return;
+        if (session.mode === mode) return;
         if ((activeChat && isChatBusy(activeChat)) || chatHasPendingApproval()) {
             new Notice('Finish or deny the current tool request before changing mode.');
             return;
@@ -253,10 +314,6 @@
         await sessionStore.setMode(session.id, mode);
         await initializeChat(session);
         refreshSessions();
-    }
-
-    function retryInitialization(): void {
-        void initializeChat(sessionStore.getActiveSession());
     }
 
     function scheduleMcpRefresh(session: ChatSession): void {
@@ -273,8 +330,15 @@
             ) {
                 return;
             }
+            if (activeChat && (isChatBusy(activeChat) || chatHasPendingApproval())) {
+                pendingSettingsRefresh.add(sessionId);
+                return;
+            }
             if (activeChat) sessionStore.syncFromChat(activeChat, sessionId);
-            void initializeChat(session);
+            const requestId = ++initializationId;
+            agentToolsStatus = 'connecting';
+            agentToolsError = '';
+            void connectAgentToolsInBackground(session, requestId);
         }, 150);
     }
 
@@ -441,7 +505,7 @@
             if (session.mode !== 'agent') {
                 return;
             }
-            if (chatLoading) {
+            if (agentToolsStatus === 'connecting') {
                 if (change === 'configuration') pendingSettingsRefresh.add(session.id);
                 return;
             }
@@ -506,8 +570,11 @@
                     hasConfiguredMcpServers={mcpSettings
                         .listServers()
                         .some((server) => server.enabled)}
+                    {agentToolsStatus}
+                    {agentToolsError}
                     agentWarning={recoveryWarning}
                     onModeChange={(mode) => void changeMode(mode)}
+                    onRetryAgentTools={retryAgentTools}
                     onToolApproval={(part, approved, scope) =>
                         handleToolApproval(part, approved, scope)}
                     {isAuthenticated}
@@ -518,16 +585,6 @@
                     onUserMessageSent={handleUserMessageSent}
                 />
             {/key}
-        {:else if chatLoading}
-            <div class="lava-chat-shell__state" role="status">Connecting Agent tools…</div>
-        {:else if chatLoadError}
-            <div class="lava-chat-shell__state lava-chat-shell__state--error" role="alert">
-                <span>{chatLoadError}</span>
-                <button type="button" onclick={retryInitialization}>Retry</button>
-                <button type="button" onclick={() => void changeMode('chat')}>
-                    Switch to Chat
-                </button>
-            </div>
         {/if}
     </div>
 </div>

@@ -1,6 +1,6 @@
 # Getlava
 
-> 💬 **Discord:** Join the [Getlava community](https://discord.gg/cnWHtWVyjE).
+> 💬 **Discord:** Join the community on [Discord](https://discord.gg/cnWHtWVyjE).
 
 Getlava brings the ideas you have already captured into the conversation—so your vault becomes active material for better thinking. Chat with models, mention notes in conversations, and let the assistant read vault notes you explicitly include—without leaving your vault.
 

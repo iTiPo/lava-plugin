@@ -861,8 +861,7 @@ If your plugin does not need CSS, delete this file.
 
 .lava-chat__tool-server,
 .lava-chat__tool-copy,
-.lava-chat__tool-details,
-.lava-chat__tool-more {
+.lava-chat__tool-details {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
@@ -891,29 +890,49 @@ If your plugin does not need CSS, delete this file.
 
 .lava-chat__tool-actions {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     flex-wrap: wrap;
     gap: 0.4rem;
 }
 
-.lava-chat__tool-actions button {
+.lava-chat__tool-actions > button,
+.lava-chat__allow-split-main,
+.lava-chat__allow-split-toggle {
     font-size: var(--font-ui-smaller);
 }
 
-.lava-chat__tool-more {
-    position: relative;
-}
-
-.lava-chat__tool-more summary,
 .lava-chat__tool-details summary {
     cursor: pointer;
 }
 
-.lava-chat__tool-more[open] {
-    display: flex;
+.lava-chat__allow-split {
+    display: inline-flex;
+    align-items: stretch;
+    max-width: 100%;
+}
+
+.lava-chat__allow-split-main {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.lava-chat__allow-split-toggle {
+    display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.35rem;
+    justify-content: center;
+    min-width: 1.75rem;
+    padding-inline: 0.35rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid color-mix(in srgb, var(--text-on-accent) 28%, transparent);
+    --icon-size: var(--icon-xs);
+}
+
+.lava-chat__allow-split-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
 }
 
 .lava-chat__tool-link {

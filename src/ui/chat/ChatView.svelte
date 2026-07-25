@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Attachment } from 'svelte/attachments';
-    import { setIcon, type App } from 'obsidian';
+    import { Menu, setIcon, type App } from 'obsidian';
     import { getToolName, isDynamicToolUIPart, isToolUIPart } from 'ai';
     import type { LavaChat, LavaUIMessage } from '../../ai/chat-factory';
     import type { ChatMode } from '../../domain/chat';
@@ -21,6 +21,10 @@
 
     const stopIcon: Attachment<HTMLButtonElement> = (element) => {
         setIcon(element, 'square');
+    };
+
+    const chevronDownIcon: Attachment<HTMLSpanElement> = (element) => {
+        setIcon(element, 'chevron-down');
     };
 
     interface Props {
@@ -205,6 +209,32 @@
                 (candidate) => candidate !== id,
             );
         }
+    }
+
+    function openAllowMenu(event: MouseEvent, part: ToolPart): void {
+        event.preventDefault();
+        event.stopPropagation();
+        if (part.state !== 'approval-requested') return;
+        if (respondingApprovalIds.includes(part.approval.id)) return;
+
+        const trigger = event.currentTarget as HTMLElement;
+        const rect = trigger.getBoundingClientRect();
+        const menu = new Menu();
+        menu.setUseNativeMenu(false);
+        menu.addItem((item) => {
+            item.setTitle('Allow for this chat').onClick(() => {
+                void respondToApproval(part, true, 'conversation');
+            });
+        });
+        menu.addItem((item) => {
+            item.setTitle('Always allow this tool').onClick(() => {
+                void respondToApproval(part, true, 'always');
+            });
+        });
+        menu.showAtPosition({
+            x: rect.left,
+            y: rect.bottom + 4,
+        });
     }
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -559,42 +589,35 @@
                                                 >
                                                     Deny
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    class="mod-cta"
-                                                    disabled={respondingApprovalIds.includes(
-                                                        part.approval.id,
-                                                    )}
-                                                    onclick={() =>
-                                                        void respondToApproval(part, true)}
-                                                >
-                                                    Allow once
-                                                </button>
-                                                <details class="lava-chat__tool-more">
-                                                    <summary>More</summary>
+                                                <div class="lava-chat__allow-split">
                                                     <button
                                                         type="button"
+                                                        class="mod-cta lava-chat__allow-split-main"
+                                                        disabled={respondingApprovalIds.includes(
+                                                            part.approval.id,
+                                                        )}
                                                         onclick={() =>
-                                                            void respondToApproval(
-                                                                part,
-                                                                true,
-                                                                'conversation',
-                                                            )}
+                                                            void respondToApproval(part, true)}
                                                     >
-                                                        Allow for this chat
+                                                        Allow once
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onclick={() =>
-                                                            void respondToApproval(
-                                                                part,
-                                                                true,
-                                                                'always',
-                                                            )}
+                                                        class="mod-cta lava-chat__allow-split-toggle"
+                                                        disabled={respondingApprovalIds.includes(
+                                                            part.approval.id,
+                                                        )}
+                                                        aria-haspopup="menu"
+                                                        aria-label="More allow options"
+                                                        onclick={(event) =>
+                                                            openAllowMenu(event, part)}
                                                     >
-                                                        Always allow this tool
+                                                        <span
+                                                            class="lava-chat__allow-split-chevron"
+                                                            {@attach chevronDownIcon}
+                                                        ></span>
                                                     </button>
-                                                </details>
+                                                </div>
                                             </div>
                                         {:else if part.state === 'output-error'}
                                             <pre class="lava-chat__tool-value lava-chat__tool-value--error"

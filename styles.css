@@ -1659,6 +1659,7 @@ If your plugin does not need CSS, delete this file.
 .lava-mcp-section__toggle {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 0.45rem;
     width: 100%;
     margin: 0;
@@ -1677,15 +1678,19 @@ If your plugin does not need CSS, delete this file.
 
 .lava-mcp-section__chevron {
     display: inline-flex;
+    flex: 0 0 auto;
     color: var(--text-muted);
     --icon-size: var(--icon-s);
 }
 
 .lava-mcp-section__labels {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
+    align-items: flex-start;
     gap: 0.1rem;
     min-width: 0;
+    text-align: left;
 }
 
 .lava-mcp-section__title {
@@ -1711,15 +1716,32 @@ If your plugin does not need CSS, delete this file.
     margin: 0.25rem 0.85rem 0.75rem;
 }
 
+.lava-mcp-header-row.setting-item {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.lava-mcp-header-row .setting-item-info {
+    display: none;
+}
+
 .lava-mcp-header-row .setting-item-control {
-    flex-wrap: wrap;
+    flex: 1 1 auto;
+    width: 100%;
     justify-content: flex-start;
-    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.45rem;
 }
 
 .lava-mcp-header-row .setting-item-control input[type='text'] {
-    width: 10.5rem;
-    min-width: 8rem;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+}
+
+.lava-mcp-header-row .setting-item-control .clickable-icon {
+    flex: 0 0 auto;
 }
 
 .lava-mcp-url-input {

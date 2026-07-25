@@ -2,7 +2,8 @@ import type { ObsidianProtocolData, Plugin } from 'obsidian';
 import type { Session } from '@supabase/supabase-js';
 import { loadLavaConfig, type LavaConfig } from '../config';
 import { createSupabaseClient } from './supabase-client';
-import type { AuthStatus, AuthUser, LavaPluginData, MagicLinkParams } from './auth-types';
+import type { AuthStatus, AuthUser, MagicLinkParams } from './auth-types';
+import { loadPluginData, updatePluginData } from '../plugin-data';
 
 type Listener = () => void;
 type LavaSupabaseClient = ReturnType<typeof createSupabaseClient>;
@@ -54,8 +55,8 @@ export class AuthStore {
         this.plugin = plugin;
         this.supabase = createSupabaseClient(plugin.app, config);
 
-        const data = (await plugin.loadData()) as LavaPluginData | null;
-        const auth = data?.auth;
+        const data = await loadPluginData(plugin);
+        const auth = data.auth;
 
         if (auth?.email) {
             this.email = auth.email;
@@ -230,7 +231,6 @@ export class AuthStore {
     private async persist(): Promise<void> {
         if (!this.plugin) return;
 
-        const existing = ((await this.plugin.loadData()) as LavaPluginData | null) ?? {};
         const persistedStatus =
             this.status === 'authenticated'
                 ? 'authenticated'
@@ -238,12 +238,12 @@ export class AuthStore {
                     ? 'pending_email'
                     : 'anonymous';
 
-        await this.plugin.saveData({
+        await updatePluginData(this.plugin, (existing) => ({
             ...existing,
             auth: {
                 status: persistedStatus,
                 email: this.email || undefined,
             },
-        });
+        }));
     }
 }

@@ -44,6 +44,7 @@ const context = await esbuild.context({
         '@lezer/highlight',
         '@lezer/lr',
         ...builtinModules,
+        ...builtinModules.map((name) => `node:${name}`),
     ],
     mainFields: ['svelte', 'browser', 'module', 'main'],
     conditions: ['svelte', 'browser'],

@@ -30,6 +30,21 @@ If your plugin does not need CSS, delete this file.
     min-height: 0;
 }
 
+.lava-chat-shell__state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: var(--text-muted);
+}
+
+.lava-chat-shell__state--error {
+    flex-wrap: wrap;
+    color: var(--text-error);
+}
+
 .lava-chat-thread-list {
     flex: 0 0 12.5rem;
     display: flex;
@@ -636,6 +651,114 @@ If your plugin does not need CSS, delete this file.
     border-top: 1px solid var(--background-modifier-border);
 }
 
+.lava-chat__mode-actions {
+    position: absolute;
+    left: 0.7rem;
+    right: 2.75rem;
+    bottom: 0.65rem;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.lava-chat__mode-switch {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 0.45rem;
+}
+
+.lava-chat__tools-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.2;
+}
+
+.lava-chat__tools-status--error {
+    color: var(--text-error);
+}
+
+.lava-chat__tools-status-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lava-chat__tools-status-retry {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-accent);
+    font-size: var(--font-ui-smaller);
+    cursor: pointer;
+}
+
+.lava-chat__tools-status-retry:hover {
+    color: var(--text-accent-hover);
+}
+
+.lava-chat__mode-option {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0.1rem 0;
+    border: none;
+    background: none;
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-normal);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+}
+
+.lava-chat__mode-option input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.lava-chat__mode-option:hover {
+    color: var(--text-muted);
+}
+
+.lava-chat__mode-option--active {
+    color: var(--text-normal);
+    font-weight: var(--font-medium);
+}
+
+.lava-chat__mode-option--active:hover {
+    color: var(--text-normal);
+}
+
+.lava-chat__mode-divider {
+    width: 1px;
+    height: 0.85em;
+    background: var(--background-modifier-border);
+}
+
+.lava-chat__agent-notice {
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-chat__agent-notice--warning {
+    color: var(--text-warning);
+}
+
 .lava-chat__signin-prompt {
     flex: 0 0 auto;
     display: flex;
@@ -667,13 +790,13 @@ If your plugin does not need CSS, delete this file.
     field-sizing: content;
     resize: none;
     width: 100%;
-    min-height: 3.5rem;
+    min-height: 4.5rem;
     max-height: 12rem;
     overflow-y: auto;
     font-family: var(--font-interface);
     font-size: var(--font-ui-small);
     line-height: 1.4;
-    padding: 0.5rem 2.75rem 2.75rem 0.6rem;
+    padding: 0.65rem 2.85rem 3.35rem 0.75rem;
     border: none;
     background: transparent;
     color: transparent;
@@ -695,16 +818,12 @@ If your plugin does not need CSS, delete this file.
     background-color: var(--background-modifier-form-field);
 }
 
-.lava-chat__input-wrapper:focus-within {
-    border-color: var(--interactive-accent);
-}
-
 .lava-chat__input-backdrop {
     position: absolute;
     inset: 0;
     box-sizing: border-box;
     overflow: hidden;
-    padding: 0.5rem 2.75rem 2.75rem 0.6rem;
+    padding: 0.65rem 2.85rem 3.35rem 0.75rem;
     color: var(--text-normal);
     font-family: var(--font-interface);
     font-size: var(--font-ui-small);
@@ -721,8 +840,8 @@ If your plugin does not need CSS, delete this file.
 
 .lava-chat__actions {
     position: absolute;
-    right: 0.5rem;
-    bottom: 0.5rem;
+    right: 0.7rem;
+    bottom: 0.55rem;
     z-index: 3;
 }
 
@@ -760,6 +879,103 @@ If your plugin does not need CSS, delete this file.
     font-size: var(--font-ui-smaller);
     color: var(--text-muted);
     font-style: italic;
+}
+
+.lava-chat__tool-card {
+    box-sizing: border-box;
+    width: min(100%, 34rem);
+    padding: 0.65rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0.45rem;
+    background: var(--background-secondary);
+}
+
+.lava-chat__tool-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-medium);
+}
+
+.lava-chat__tool-server,
+.lava-chat__tool-copy,
+.lava-chat__tool-details {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-chat__tool-copy {
+    margin: 0.5rem 0;
+}
+
+.lava-chat__tool-value {
+    max-height: 14rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    overflow: auto;
+    border-radius: 0.35rem;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-smaller);
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+}
+
+.lava-chat__tool-actions {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.lava-chat__tool-actions > button,
+.lava-chat__allow-split-main,
+.lava-chat__allow-split-toggle {
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-chat__tool-details summary {
+    cursor: pointer;
+}
+
+.lava-chat__allow-split {
+    display: inline-flex;
+    align-items: stretch;
+    max-width: 100%;
+}
+
+.lava-chat__allow-split-main {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.lava-chat__allow-split-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    padding-inline: 0.35rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid color-mix(in srgb, var(--text-on-accent) 28%, transparent);
+    --icon-size: var(--icon-xs);
+}
+
+.lava-chat__allow-split-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.lava-chat__tool-link {
+    display: inline-block;
+    margin-top: 0.45rem;
+    font-size: var(--font-ui-small);
 }
 
 .lava-chat__work {
@@ -1363,3 +1579,248 @@ If your plugin does not need CSS, delete this file.
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.lava-mcp-server-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin: 0.35rem 0 1rem;
+}
+
+.lava-mcp-empty {
+    padding: 0.85rem 1rem;
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 0.55rem;
+    background: var(--background-secondary);
+}
+
+.lava-mcp-empty p {
+    margin: 0;
+}
+
+.lava-mcp-server-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0.55rem;
+    background: var(--background-secondary);
+}
+
+.lava-mcp-server-row--disabled {
+    opacity: 0.78;
+}
+
+.lava-mcp-server-row__identity {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.lava-mcp-server-row__title {
+    font-size: var(--font-ui-medium);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+    line-height: 1.3;
+}
+
+.lava-mcp-server-row__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.55rem;
+    margin-top: 0.35rem;
+}
+
+.lava-mcp-server-row__summary {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-mcp-server-row__actions {
+    flex: 0 0 auto;
+}
+
+.lava-mcp-server-row__controls {
+    border: none;
+    padding: 0;
+}
+
+.lava-mcp-server-row__controls .setting-item-info {
+    display: none;
+}
+
+.lava-mcp-server-row__controls .setting-item-control {
+    padding: 0;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.lava-mcp-server-modal {
+    width: min(42rem, 92vw);
+}
+
+.lava-mcp-modal__lede {
+    margin-top: 0;
+}
+
+.lava-mcp-modal__status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.6rem;
+    margin: 0 0 0.75rem;
+}
+
+.lava-mcp-modal__status-summary {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.lava-mcp-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.3rem;
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    line-height: 1.35;
+    border: 1px solid transparent;
+}
+
+.lava-mcp-status--connected {
+    color: var(--text-success);
+    background: color-mix(in srgb, var(--text-success) 14%, transparent);
+    border-color: color-mix(in srgb, var(--text-success) 28%, transparent);
+}
+
+.lava-mcp-status--connecting {
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border);
+}
+
+.lava-mcp-status--disconnected {
+    color: var(--text-muted);
+    background: transparent;
+    border-color: var(--background-modifier-border);
+}
+
+.lava-mcp-status--error {
+    color: var(--text-error);
+    background: color-mix(in srgb, var(--text-error) 12%, transparent);
+    border-color: color-mix(in srgb, var(--text-error) 28%, transparent);
+}
+
+.lava-mcp-section {
+    margin: 0.55rem 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0.45rem;
+    background: var(--background-secondary);
+}
+
+.lava-mcp-section__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.55rem 0.65rem;
+    border: none;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--text-normal);
+    text-align: left;
+    cursor: pointer;
+}
+
+.lava-mcp-section__toggle:hover {
+    background: var(--background-modifier-hover);
+}
+
+.lava-mcp-section__chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    --icon-size: var(--icon-s);
+}
+
+.lava-mcp-section__labels {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+    text-align: left;
+}
+
+.lava-mcp-section__title {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+}
+
+.lava-mcp-section__subtitle {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.lava-mcp-section__content {
+    padding: 0 0.35rem 0.35rem;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.lava-mcp-section__hint {
+    margin: 0.55rem 0.5rem 0.25rem;
+}
+
+.lava-mcp-tools-empty {
+    margin: 0.35rem 0 0.75rem;
+}
+
+.lava-mcp-header-row.setting-item {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.lava-mcp-header-row .setting-item-info {
+    display: none;
+}
+
+.lava-mcp-header-row .setting-item-control {
+    flex: 1 1 auto;
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.45rem;
+}
+
+.lava-mcp-header-row .setting-item-control input[type='text'] {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+}
+
+.lava-mcp-header-row .setting-item-control .clickable-icon {
+    flex: 0 0 auto;
+}
+
+.lava-mcp-url-input {
+    min-width: 14rem;
+    width: 100%;
+    max-width: 28rem;
+}
+
+
+

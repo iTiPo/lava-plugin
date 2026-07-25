@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest';
+import { fingerprintToolDefinition } from '../../src/mcp/fingerprint';
+import { findExternalReference, formatToolErrorMessage, sanitizeToolValue } from '../../src/mcp/output';
+import { namespacedToolId } from '../../src/mcp/connection-manager';
+
+describe('MCP tool safety helpers', () => {
+    it('fingerprints objects independently of key order', async () => {
+        const first = await fingerprintToolDefinition({
+            description: 'Create an issue',
+            inputSchema: { type: 'object', properties: { title: { type: 'string' } } },
+        });
+        const second = await fingerprintToolDefinition({
+            inputSchema: { properties: { title: { type: 'string' } }, type: 'object' },
+            description: 'Create an issue',
+        });
+
+        expect(first).toBe(second);
+    });
+
+    it('removes secrets and bounds large output', () => {
+        const sanitized = sanitizeToolValue({
+            token: 'secret',
+            title: 'Issue',
+            content: 'x'.repeat(20_000),
+            image: { data: 'x'.repeat(20_000) },
+        }) as Record<string, unknown>;
+
+        expect(sanitized.token).toBeUndefined();
+        expect(String(sanitized.content)).toContain('[truncated]');
+        expect(sanitized.image).toEqual({ data: '[binary content omitted]' });
+    });
+
+    it('finds external result links', () => {
+        expect(
+            findExternalReference({
+                structuredContent: {
+                    html_url: 'https://github.com/getlava/lava-plugin/issues/10',
+                },
+            }),
+        ).toBe('https://github.com/getlava/lava-plugin/issues/10');
+    });
+
+    it('formats tool errors with real MCP content instead of a scrubbed placeholder', () => {
+        expect(
+            formatToolErrorMessage({
+                isError: true,
+                content: [{ type: 'text', text: 'Not Found: Issue does not exist' }],
+            }),
+        ).toBe('Not Found: Issue does not exist');
+        expect(formatToolErrorMessage(new Error('boom'))).toBe('boom');
+        expect(formatToolErrorMessage({ status: 404, message: 'missing' })).toContain(
+            '"status": 404',
+        );
+    });
+
+    it('keeps sanitized tool-name collisions distinct', async () => {
+        const firstFingerprint = await fingerprintToolDefinition({ name: 'create-issue' });
+        const secondFingerprint = await fingerprintToolDefinition({ name: 'create_issue' });
+
+        expect(
+            namespacedToolId('github', 'create-issue', firstFingerprint),
+        ).not.toBe(
+            namespacedToolId('github', 'create_issue', secondFingerprint),
+        );
+    });
+});

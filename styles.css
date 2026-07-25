@@ -1686,21 +1686,28 @@ If your plugin does not need CSS, delete this file.
 .lava-mcp-section__labels {
     display: flex;
     flex: 1 1 auto;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.1rem;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
     min-width: 0;
     text-align: left;
 }
 
 .lava-mcp-section__title {
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: var(--font-ui-small);
     font-weight: var(--font-semibold);
 }
 
 .lava-mcp-section__subtitle {
+    flex: 0 0 auto;
+    margin-left: auto;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
+    text-align: right;
+    white-space: nowrap;
 }
 
 .lava-mcp-section__content {

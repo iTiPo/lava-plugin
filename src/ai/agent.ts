@@ -65,7 +65,7 @@ export interface LavaAgentLifecycle {
 export interface CreateLavaAgentOptions {
     mode: ChatMode;
     mcpTools?: ToolSet;
-    descriptors?: ConnectedMcpTool[];
+    descriptors?: ConnectedMcpTool[] | (() => ConnectedMcpTool[]);
     conversationGrants?: McpConversationGrant[] | (() => McpConversationGrant[]);
     lifecycle?: LavaAgentLifecycle;
 }
@@ -75,10 +75,13 @@ export function createLavaAgent(
     authStore: AuthStore,
     options: CreateLavaAgentOptions = { mode: 'chat' },
 ) {
-    const descriptors = options.descriptors ?? [];
+    const resolveDescriptors = (): ConnectedMcpTool[] =>
+        typeof options.descriptors === 'function'
+            ? options.descriptors()
+            : (options.descriptors ?? []);
     const policyContext = (): ToolPolicyContext => ({
         mode: options.mode,
-        tools: descriptors,
+        tools: resolveDescriptors(),
         conversationGrants:
             typeof options.conversationGrants === 'function'
                 ? options.conversationGrants()
@@ -102,7 +105,9 @@ export function createLavaAgent(
             if (toolCall.toolName === 'readNote' || !options.lifecycle) return;
             const run = options.lifecycle.currentRun();
             if (!run) return;
-            const descriptor = descriptors.find((tool) => tool.id === toolCall.toolName);
+            const descriptor = resolveDescriptors().find(
+                (tool) => tool.id === toolCall.toolName,
+            );
             const operationId = `${run.runId}:${toolCall.toolCallId}`;
             await options.lifecycle.toolStarted({
                 operationId,
@@ -118,7 +123,9 @@ export function createLavaAgent(
             if (toolCall.toolName === 'readNote' || !options.lifecycle) return;
             const run = options.lifecycle.currentRun();
             if (!run) return;
-            const descriptor = descriptors.find((tool) => tool.id === toolCall.toolName);
+            const descriptor = resolveDescriptors().find(
+                (tool) => tool.id === toolCall.toolName,
+            );
             const operationId = `${run.runId}:${toolCall.toolCallId}`;
             const isError = toolOutput.type === 'tool-error';
             const value: unknown = isError

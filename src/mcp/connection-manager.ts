@@ -1,5 +1,9 @@
 import { createMCPClient, type ListToolsResult, type MCPClient } from '@ai-sdk/mcp';
 import type { ToolSet } from 'ai';
+import {
+    reconcileManifestPolicies,
+    syncConnectedToolPolicies,
+} from './approval-policy';
 import { fingerprintToolDefinition } from './fingerprint';
 import type { McpSettingsStore } from './settings-store';
 import type {
@@ -31,8 +35,13 @@ export class McpConnectionManager {
     private readonly listeners = new Set<Listener>();
     private readonly generations = new Map<string, number>();
     private readonly inFlight = new Map<string, Promise<Connection>>();
+    private readonly unsubscribeSettings: () => void;
 
-    constructor(private readonly settings: McpSettingsStore) {}
+    constructor(private readonly settings: McpSettingsStore) {
+        this.unsubscribeSettings = this.settings.subscribe(() => {
+            this.syncPoliciesFromSettings();
+        });
+    }
 
     subscribe(listener: Listener): () => void {
         this.listeners.add(listener);
@@ -45,6 +54,39 @@ export class McpConnectionManager {
 
     getError(serverId: string): string {
         return this.errors.get(serverId) ?? '';
+    }
+
+    /**
+     * Align live connection descriptors with persisted settings policies.
+     * Settings are the source of truth for Always-allow / Auto-run.
+     */
+    syncPoliciesFromSettings(serverId?: string): boolean {
+        let changed = false;
+        const targets = serverId
+            ? ([[serverId, this.connections.get(serverId)]] as const)
+            : [...this.connections.entries()];
+        for (const [id, connection] of targets) {
+            if (!connection) continue;
+            const server = this.settings.getServer(id);
+            if (!server) continue;
+            if (syncConnectedToolPolicies(connection.descriptors, server.tools)) {
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /** Synced, non-blocked descriptors for the live agent policy checks. */
+    listAgentDescriptors(): ConnectedMcpTool[] {
+        this.syncPoliciesFromSettings();
+        const descriptors: ConnectedMcpTool[] = [];
+        for (const connection of this.connections.values()) {
+            for (const descriptor of connection.descriptors) {
+                if (descriptor.policy === 'blocked') continue;
+                descriptors.push(descriptor);
+            }
+        }
+        return descriptors;
     }
 
     /** Connect every enabled server that has a URL. Skips live/in-flight connections. */
@@ -76,6 +118,7 @@ export class McpConnectionManager {
                 }
             }),
         );
+        this.syncPoliciesFromSettings();
         const tools: ToolSet = {};
         const descriptors: ConnectedMcpTool[] = [];
         for (const connection of connections) {
@@ -97,7 +140,10 @@ export class McpConnectionManager {
 
     async connect(serverId: string, refreshManifest = false): Promise<Connection> {
         const existing = this.connections.get(serverId);
-        if (existing && !refreshManifest) return existing;
+        if (existing && !refreshManifest) {
+            this.syncPoliciesFromSettings(serverId);
+            return existing;
+        }
 
         const pending = this.inFlight.get(serverId);
         if (pending && !refreshManifest) return pending;
@@ -114,7 +160,10 @@ export class McpConnectionManager {
         refreshManifest: boolean,
     ): Promise<Connection> {
         const existing = this.connections.get(serverId);
-        if (existing && !refreshManifest) return existing;
+        if (existing && !refreshManifest) {
+            this.syncPoliciesFromSettings(serverId);
+            return existing;
+        }
         const server = this.settings.getServer(serverId);
         if (!server) throw new Error('MCP server not found.');
         if (!server.url) throw new Error('MCP server URL is required.');
@@ -145,6 +194,9 @@ export class McpConnectionManager {
             }
             const latestServer = this.settings.getServer(serverId) ?? server;
             const manifest = await buildManifest(latestServer, definitions);
+            // Settings may have changed (e.g. Always allow) while tools/list was in flight.
+            const currentServer = this.settings.getServer(serverId) ?? latestServer;
+            reconcileManifestPolicies(manifest, currentServer.tools);
             await this.settings.updateServer(
                 serverId,
                 {
@@ -198,6 +250,7 @@ export class McpConnectionManager {
     }
 
     async closeAll(): Promise<void> {
+        this.unsubscribeSettings();
         await Promise.all(
             [...this.connections.keys()].map((serverId) => this.disconnect(serverId)),
         );

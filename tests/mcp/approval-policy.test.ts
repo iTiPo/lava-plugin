@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
     countToolPolicies,
+    reconcileManifestPolicies,
     resolveToolPolicy,
+    syncConnectedToolPolicies,
     type ToolPolicyContext,
 } from '../../src/mcp/approval-policy';
+import type { ConnectedMcpTool, McpToolManifestEntry } from '../../src/mcp/types';
 
 const baseContext: ToolPolicyContext = {
     mode: 'agent',
@@ -66,5 +69,63 @@ describe('tool access policy', () => {
 
         granted.conversationGrants[0]!.fingerprint = 'changed';
         expect(resolveToolPolicy('mcp_github_create_issue', granted)).toBe('ask');
+    });
+
+    it('syncs live descriptors from persisted settings policies', () => {
+        const descriptors: ConnectedMcpTool[] = [
+            {
+                id: 'mcp_github_create_issue',
+                serverId: 'github',
+                serverName: 'GitHub',
+                toolName: 'create_issue',
+                title: 'Create issue',
+                fingerprint: 'fingerprint-1',
+                readOnlyHint: false,
+                policy: 'ask',
+            },
+        ];
+
+        expect(
+            syncConnectedToolPolicies(descriptors, [
+                {
+                    name: 'create_issue',
+                    fingerprint: 'fingerprint-1',
+                    policy: 'auto',
+                },
+            ]),
+        ).toBe(true);
+        expect(descriptors[0]!.policy).toBe('auto');
+
+        expect(
+            syncConnectedToolPolicies(descriptors, [
+                {
+                    name: 'create_issue',
+                    fingerprint: 'changed',
+                    policy: 'auto',
+                },
+            ]),
+        ).toBe(true);
+        expect(descriptors[0]!.policy).toBe('ask');
+    });
+
+    it('reconciles manifest entries with newer settings policies', () => {
+        const manifest: McpToolManifestEntry[] = [
+            {
+                name: 'create_issue',
+                title: 'Create issue',
+                fingerprint: 'fingerprint-1',
+                readOnlyHint: false,
+                policy: 'ask',
+            },
+        ];
+
+        reconcileManifestPolicies(manifest, [
+            {
+                name: 'create_issue',
+                fingerprint: 'fingerprint-1',
+                policy: 'auto',
+            },
+        ]);
+        expect(manifest[0]!.policy).toBe('auto');
     });
 });

@@ -90,7 +90,7 @@
             agent: {
                 mode: session.mode,
                 mcpTools: mcp.tools,
-                descriptors: mcp.descriptors,
+                descriptors: () => mcpConnections.listAgentDescriptors(),
                 conversationGrants: () => session.toolGrants,
                 lifecycle: {
                     currentRun: () => {
@@ -312,8 +312,8 @@
                 descriptor.toolName,
                 'auto',
             );
-            descriptor.policy = 'auto';
-            connectedTools = [...connectedTools];
+            // Settings emit syncs live connection descriptors; refresh UI list.
+            connectedTools = mcpConnections.listAgentDescriptors();
         }
         await activeChat.addToolApprovalResponse({
             id: part.approval.id,

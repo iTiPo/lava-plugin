@@ -119,6 +119,10 @@ interface RpcMessage {
 class FakeSettings {
     constructor(private config: McpServerConfig) {}
 
+    subscribe(_listener: (change: 'configuration' | 'manifest') => void): () => void {
+        return () => undefined;
+    }
+
     listServers(): McpServerConfig[] {
         return [
             {

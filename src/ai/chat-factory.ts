@@ -6,6 +6,7 @@ import {
 } from 'ai';
 import type { App } from 'obsidian';
 import type { AuthStore } from '../auth/auth-store';
+import { formatToolErrorMessage } from '../mcp/output';
 import { createLavaAgent, type CreateLavaAgentOptions } from './agent';
 import type { LavaChat, LavaUIMessage } from './chat-types';
 
@@ -35,7 +36,11 @@ export function createChat(
     return new Chat<LavaUIMessage>({
         id: options?.id,
         messages: options?.messages ?? [],
-        transport: new DirectChatTransport({ agent }),
+        transport: new DirectChatTransport({
+            agent,
+            // In-process UI: show real tool error content instead of the SDK default scrub.
+            onError: formatToolErrorMessage,
+        }),
         onFinish: options?.onFinish,
         onError: options?.onError,
         sendAutomaticallyWhen: async ({ messages }) => {

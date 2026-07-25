@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fingerprintToolDefinition } from '../../src/mcp/fingerprint';
-import { findExternalReference, sanitizeToolValue } from '../../src/mcp/output';
+import { findExternalReference, formatToolErrorMessage, sanitizeToolValue } from '../../src/mcp/output';
 import { namespacedToolId } from '../../src/mcp/connection-manager';
 
 describe('MCP tool safety helpers', () => {
@@ -38,6 +38,19 @@ describe('MCP tool safety helpers', () => {
                 },
             }),
         ).toBe('https://github.com/getlava/lava-plugin/issues/10');
+    });
+
+    it('formats tool errors with real MCP content instead of a scrubbed placeholder', () => {
+        expect(
+            formatToolErrorMessage({
+                isError: true,
+                content: [{ type: 'text', text: 'Not Found: Issue does not exist' }],
+            }),
+        ).toBe('Not Found: Issue does not exist');
+        expect(formatToolErrorMessage(new Error('boom'))).toBe('boom');
+        expect(formatToolErrorMessage({ status: 404, message: 'missing' })).toContain(
+            '"status": 404',
+        );
     });
 
     it('keeps sanitized tool-name collisions distinct', async () => {

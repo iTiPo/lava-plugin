@@ -6,7 +6,7 @@ import {
     resolveToolPolicy,
     type ToolPolicyContext,
 } from '../mcp/approval-policy';
-import { findExternalReference, sanitizeToolValue } from '../mcp/output';
+import { findExternalReference, formatToolErrorMessage, sanitizeToolValue } from '../mcp/output';
 import type {
     ConnectedMcpTool,
     McpConversationGrant,
@@ -141,7 +141,7 @@ export function createLavaAgent(
                 toolName: descriptor?.toolName ?? toolCall.toolName,
                 authorization: authorizationFor(toolCall.toolName, policyContext()),
                 result: failed ? undefined : sanitizeToolValue(value),
-                error: failed ? errorMessage(value) : undefined,
+                error: failed ? formatToolErrorMessage(value) : undefined,
                 externalReference: failed ? undefined : findExternalReference(value),
             });
         },
@@ -163,28 +163,6 @@ function authorizationFor(
     if (hasConversationGrant) return 'conversation';
     if (descriptor.policy === 'auto') return 'always';
     return 'once';
-}
-
-function errorMessage(value: unknown): string {
-    if (value instanceof Error) return value.message;
-    if (value && typeof value === 'object') {
-        const result = value as { content?: unknown };
-        if (Array.isArray(result.content)) {
-            const text = result.content
-                .filter(
-                    (entry): entry is { type: 'text'; text: string } =>
-                        Boolean(entry) &&
-                        typeof entry === 'object' &&
-                        (entry as { type?: unknown }).type === 'text' &&
-                        typeof (entry as { text?: unknown }).text === 'string',
-                )
-                .map((entry) => entry.text)
-                .join('\n');
-            if (text) return text;
-        }
-        return 'The MCP server reported a tool error.';
-    }
-    return typeof value === 'string' ? value : 'Tool execution failed.';
 }
 
 function isMcpApplicationError(value: unknown): boolean {

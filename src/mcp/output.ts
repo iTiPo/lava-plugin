@@ -48,9 +48,49 @@ export function sanitizeToolValue(value: unknown, depth = 0): unknown {
     return undefined;
 }
 
+/**
+ * Human-readable tool error text for UI Details and persistence.
+ * Prefers MCP text content, then sanitized JSON — same spirit as successful outputs.
+ */
+export function formatToolErrorMessage(value: unknown): string {
+    if (value instanceof Error) return value.message;
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') {
+        const text = mcpContentText(value);
+        if (text) return text;
+        try {
+            return JSON.stringify(sanitizeToolValue(value), null, 2);
+        } catch {
+            return 'The MCP server reported a tool error.';
+        }
+    }
+    return value === undefined || value === null
+        ? 'Tool execution failed.'
+        : typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint'
+          ? String(value)
+          : 'Tool execution failed.';
+}
+
 export function findExternalReference(value: unknown): string | undefined {
     const candidates = collectStrings(value);
     return candidates.find((candidate) => /^https?:\/\//i.test(candidate));
+}
+
+function mcpContentText(value: object): string | undefined {
+    const content = (value as { content?: unknown }).content;
+    if (!Array.isArray(content)) return undefined;
+    const text = content
+        .filter(
+            (entry): entry is { type: 'text'; text: string } =>
+                Boolean(entry) &&
+                typeof entry === 'object' &&
+                (entry as { type?: unknown }).type === 'text' &&
+                typeof (entry as { text?: unknown }).text === 'string',
+        )
+        .map((entry) => entry.text)
+        .join('\n')
+        .trim();
+    return text || undefined;
 }
 
 function collectStrings(value: unknown, depth = 0): string[] {

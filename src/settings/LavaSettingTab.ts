@@ -80,10 +80,13 @@ export class LavaSettingTab extends PluginSettingTab {
 		const actions = row.createDiv({ cls: 'lava-mcp-server-row__actions' });
 		new Setting(actions)
 			.setClass('lava-mcp-server-row__controls')
-			.addButton((button) => {
-				button.setButtonText('Configure').onClick(() => {
-					this.openServerModal(server.id);
-				});
+			.addExtraButton((button) => {
+				button
+					.setIcon('pencil')
+					.setTooltip('Configure server')
+					.onClick(() => {
+						this.openServerModal(server.id);
+					});
 			})
 			.addExtraButton((button) => {
 				button

@@ -1,6 +1,8 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import obsidianmd from 'eslint-plugin-obsidianmd';
+import { DEFAULT_ACRONYMS } from 'eslint-plugin-obsidianmd/dist/lib/rules/ui/acronyms.js';
+import { DEFAULT_BRANDS } from 'eslint-plugin-obsidianmd/dist/lib/rules/ui/brands.js';
 import globals from 'globals';
 import { globalIgnores, defineConfig } from 'eslint/config';
 
@@ -39,4 +41,23 @@ export default defineConfig(
     },
 
     ...obsidianmd.configs.recommended,
+
+    {
+        rules: {
+            'obsidianmd/ui/sentence-case': [
+                'warn',
+                {
+                    acronyms: [...DEFAULT_ACRONYMS, 'MCP', 'SSE'],
+                    brands: [
+                        ...DEFAULT_BRANDS,
+                        'OAuth',
+                        'Streamable',
+                        'Agent',
+                        'Ask',
+                    ],
+                    ignoreRegex: ['^https?://'],
+                },
+            ],
+        },
+    },
 );

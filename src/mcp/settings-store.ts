@@ -149,9 +149,30 @@ function normalizeMcpData(value: unknown): McpPluginData {
     };
 }
 
-function isServerLike(value: unknown): value is McpServerConfig {
+/** Disk/partial shape accepted before normalization into `McpServerConfig`. */
+interface ServerInput {
+    id: string;
+    name: string;
+    url: string;
+    enabled?: unknown;
+    headers?: unknown;
+    tools?: unknown;
+    manifestUpdatedAt?: unknown;
+}
+
+/** Disk/partial tool entry accepted before normalization. */
+interface ToolInput {
+    name: string;
+    fingerprint: string;
+    title?: unknown;
+    description?: unknown;
+    readOnlyHint?: unknown;
+    policy?: unknown;
+}
+
+function isServerLike(value: unknown): value is ServerInput {
     if (!value || typeof value !== 'object') return false;
-    const server = value as Partial<McpServerConfig>;
+    const server = value as Partial<ServerInput>;
     return (
         typeof server.id === 'string' &&
         typeof server.name === 'string' &&
@@ -159,26 +180,24 @@ function isServerLike(value: unknown): value is McpServerConfig {
     );
 }
 
-function normalizeServer(server: McpServerConfig): McpServerConfig {
+function normalizeServer(server: ServerInput | McpServerConfig): McpServerConfig {
     return {
         id: server.id,
         name: server.name.trim() || 'MCP server',
         url: server.url.trim(),
+        // Missing `enabled` on disk defaults to on.
         enabled: server.enabled !== false,
         headers: normalizeHeaders(server.headers),
         tools: Array.isArray(server.tools)
             ? server.tools.filter(isToolLike).map((tool) => ({
                   name: tool.name,
-                  title: tool.title,
-                  description: tool.description,
+                  title: typeof tool.title === 'string' ? tool.title : undefined,
+                  description:
+                      typeof tool.description === 'string' ? tool.description : undefined,
                   fingerprint: tool.fingerprint,
+                  // Missing hint defaults to false (not read-only).
                   readOnlyHint: tool.readOnlyHint === true,
-                  policy:
-                      tool.policy === 'blocked' ||
-                      tool.policy === 'auto' ||
-                      tool.policy === 'ask'
-                          ? tool.policy
-                          : 'ask',
+                  policy: normalizeToolPolicy(tool.policy),
               }))
             : [],
         manifestUpdatedAt:
@@ -186,6 +205,11 @@ function normalizeServer(server: McpServerConfig): McpServerConfig {
                 ? server.manifestUpdatedAt
                 : undefined,
     };
+}
+
+function normalizeToolPolicy(value: unknown): McpToolPolicy {
+    if (value === 'blocked' || value === 'auto' || value === 'ask') return value;
+    return 'ask';
 }
 
 function normalizeHeaders(value: unknown): McpHttpHeader[] {
@@ -203,9 +227,9 @@ function isHeaderLike(value: unknown): value is McpHttpHeader {
     return typeof header.id === 'string';
 }
 
-function isToolLike(value: unknown): value is McpToolManifestEntry {
+function isToolLike(value: unknown): value is ToolInput {
     if (!value || typeof value !== 'object') return false;
-    const tool = value as Partial<McpToolManifestEntry>;
+    const tool = value as Partial<ToolInput>;
     return typeof tool.name === 'string' && typeof tool.fingerprint === 'string';
 }
 

@@ -60,7 +60,7 @@ export function countToolPolicies(context: ToolPolicyContext): {
  */
 export function syncConnectedToolPolicies(
 	descriptors: ConnectedMcpTool[],
-	settingsTools: ReadonlyArray<ToolPolicySource>,
+	settingsTools: readonly ToolPolicySource[],
 ): boolean {
 	const byName = new Map(settingsTools.map((tool) => [tool.name, tool]));
 	let changed = false;
@@ -82,7 +82,7 @@ export function syncConnectedToolPolicies(
  */
 export function reconcileManifestPolicies(
 	manifest: McpToolManifestEntry[],
-	settingsTools: ReadonlyArray<ToolPolicySource>,
+	settingsTools: readonly ToolPolicySource[],
 ): void {
 	const byName = new Map(settingsTools.map((tool) => [tool.name, tool]));
 	for (const entry of manifest) {

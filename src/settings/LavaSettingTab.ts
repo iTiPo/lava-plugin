@@ -1,6 +1,7 @@
 import {
 	PluginSettingTab,
-	type Setting,
+	Setting,
+	requireApiVersion,
 	type SettingDefinitionItem,
 } from 'obsidian';
 import type LavaPlugin from '../main';
@@ -8,6 +9,13 @@ import type { McpServerConfig } from '../mcp/types';
 import { formatCount } from './format';
 import { McpServerModal, hostLabel, statusLabel } from './McpServerModal';
 
+/**
+ * Settings tab with dual rendering:
+ * - Obsidian 1.13+: declarative `getSettingDefinitions()` (searchable)
+ * - Older Obsidian: imperative `display()` fallback
+ *
+ * 1.13 is still Catalyst-only; keep `display()` until minAppVersion can move to 1.13.0.
+ */
 export class LavaSettingTab extends PluginSettingTab {
 	private unsubscribeConnections: (() => void) | undefined;
 	private statusRefreshTimer: number | undefined;
@@ -51,11 +59,15 @@ export class LavaSettingTab extends PluginSettingTab {
 					desc: serverSummary(server, this.lavaPlugin.mcpConnections.getStatus(server.id)),
 					aliases: ['MCP', hostLabel(server.url)],
 					render: (setting) => {
-						this.renderServerRow(setting, server);
+						this.renderDeclarativeServerRow(setting, server);
 					},
 				})),
 			},
 		];
+	}
+
+	display(): void {
+		this.renderImperativeTab();
 	}
 
 	override hide(): void {
@@ -70,6 +82,59 @@ export class LavaSettingTab extends PluginSettingTab {
 		super.hide();
 	}
 
+	private refreshTab(): void {
+		if (requireApiVersion('1.13.0')) {
+			this.update();
+			return;
+		}
+		// Avoid calling deprecated display() from our code; Obsidian still
+		// invokes display() on hosts below 1.13.
+		this.renderImperativeTab();
+	}
+
+	private renderImperativeTab(): void {
+		this.ensureConnectionSubscription();
+
+		const servers = this.lavaPlugin.mcpSettings.listServers();
+		if (!this.refreshingFromStatus) {
+			this.kickOffAutoConnects(servers);
+		}
+
+		const { containerEl } = this;
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName('MCP servers')
+			.setDesc(
+				'Connect Streamable HTTP servers. Tools are available only in Agent mode. OAuth, SSE, and stdio are not supported yet.',
+			)
+			.setHeading();
+
+		const listEl = containerEl.createDiv({ cls: 'lava-mcp-server-list' });
+
+		if (servers.length === 0) {
+			const empty = listEl.createDiv({ cls: 'lava-mcp-empty' });
+			empty.createEl('p', {
+				text: 'No MCP servers yet. Add a server, then configure its URL, headers, and tools.',
+				cls: 'setting-item-description',
+			});
+		} else {
+			for (const server of servers) this.renderImperativeServerRow(listEl, server);
+		}
+
+		new Setting(containerEl)
+			.setName('Add server')
+			.setDesc('Opens the server configuration dialog.')
+			.addButton((button) => {
+				button
+					.setButtonText('Add MCP server')
+					.setCta()
+					.onClick(() => {
+						void this.addServer();
+					});
+			});
+	}
+
 	private ensureConnectionSubscription(): void {
 		if (this.unsubscribeConnections) return;
 		this.unsubscribeConnections = this.lavaPlugin.mcpConnections.subscribe(() => {
@@ -80,7 +145,7 @@ export class LavaSettingTab extends PluginSettingTab {
 				this.statusRefreshTimer = undefined;
 				this.refreshingFromStatus = true;
 				try {
-					this.update();
+					this.refreshTab();
 				} finally {
 					this.refreshingFromStatus = false;
 				}
@@ -104,7 +169,7 @@ export class LavaSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private renderServerRow(setting: Setting, server: McpServerConfig): void {
+	private renderDeclarativeServerRow(setting: Setting, server: McpServerConfig): void {
 		setting.setClass('lava-mcp-server-row__controls');
 		if (!server.enabled) {
 			setting.settingEl.addClass('lava-mcp-server-row--disabled');
@@ -141,19 +206,71 @@ export class LavaSettingTab extends PluginSettingTab {
 		});
 	}
 
+	private renderImperativeServerRow(listEl: HTMLElement, server: McpServerConfig): void {
+		const row = listEl.createDiv({ cls: 'lava-mcp-server-row' });
+		if (!server.enabled) row.addClass('lava-mcp-server-row--disabled');
+
+		const identity = row.createDiv({ cls: 'lava-mcp-server-row__identity' });
+		identity.createDiv({
+			text: serverDisplayName(server),
+			cls: 'lava-mcp-server-row__title',
+		});
+
+		const meta = identity.createDiv({ cls: 'lava-mcp-server-row__meta' });
+		const status = this.lavaPlugin.mcpConnections.getStatus(server.id);
+		meta.createSpan({
+			cls: `lava-mcp-status lava-mcp-status--${status}`,
+			text: statusLabel(status),
+		});
+		meta.createSpan({
+			cls: 'lava-mcp-server-row__summary',
+			text: serverMetaSummary(server),
+		});
+
+		const actions = row.createDiv({ cls: 'lava-mcp-server-row__actions' });
+		new Setting(actions)
+			.setClass('lava-mcp-server-row__controls')
+			.addExtraButton((button) => {
+				button
+					.setIcon('pencil')
+					.setTooltip('Configure server')
+					.onClick(() => {
+						this.openServerModal(server.id);
+					});
+			})
+			.addExtraButton((button) => {
+				button
+					.setIcon('trash')
+					.setTooltip('Remove server')
+					.onClick(() => {
+						void this.removeServer(server.id);
+					});
+			})
+			.addToggle((toggle) => {
+				toggle.setTooltip(server.enabled ? 'Enabled' : 'Disabled');
+				toggle.setValue(server.enabled).onChange((enabled) => {
+					void this.setServerEnabled(server.id, enabled);
+				});
+			});
+	}
+
 	private async addServer(): Promise<void> {
 		const server = await this.lavaPlugin.mcpSettings.addServer();
-		this.update();
+		this.refreshTab();
 		this.openServerModal(server.id, { expandHeaders: true });
 	}
 
 	private async removeServerAt(index: number): Promise<void> {
 		const server = this.lavaPlugin.mcpSettings.listServers()[index];
 		if (!server) return;
-		await this.lavaPlugin.mcpConnections.disconnect(server.id);
-		await this.lavaPlugin.mcpSettings.removeServer(server.id);
-		this.autoConnectAttempted.delete(server.id);
-		this.update();
+		await this.removeServer(server.id);
+	}
+
+	private async removeServer(serverId: string): Promise<void> {
+		await this.lavaPlugin.mcpConnections.disconnect(serverId);
+		await this.lavaPlugin.mcpSettings.removeServer(serverId);
+		this.autoConnectAttempted.delete(serverId);
+		this.refreshTab();
 	}
 
 	private async setServerEnabled(serverId: string, enabled: boolean): Promise<void> {
@@ -162,7 +279,7 @@ export class LavaSettingTab extends PluginSettingTab {
 			await this.lavaPlugin.mcpConnections.disconnect(serverId);
 		}
 		this.autoConnectAttempted.delete(serverId);
-		this.update();
+		this.refreshTab();
 	}
 
 	private openServerModal(
@@ -174,7 +291,7 @@ export class LavaSettingTab extends PluginSettingTab {
 			this.lavaPlugin,
 			serverId,
 			() => {
-				this.update();
+				this.refreshTab();
 			},
 			options,
 		).open();

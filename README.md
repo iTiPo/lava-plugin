@@ -17,7 +17,7 @@ Getlava brings the ideas you have already captured into the conversation—so yo
 
 ## Requirements
 
-- Obsidian **1.13.0** or newer
+- Obsidian **1.11.4** or newer
 - Desktop (Windows, macOS, or Linux)
 
 ## Getting started

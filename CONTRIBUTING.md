@@ -5,7 +5,7 @@ This is the handbook for developing this plugin. Product overview for end users 
 ## Requirements
 
 - Node.js 18+ and npm.
-- Obsidian 1.13.0 or newer (`minAppVersion` in `manifest.json`).
+- Obsidian 1.11.4 or newer (`minAppVersion` in `manifest.json`).
 
 ## Setup
 

@@ -67,7 +67,11 @@ describe('tool access policy', () => {
         };
         expect(resolveToolPolicy('mcp_github_create_issue', granted)).toBe('auto');
 
-        granted.conversationGrants[0]!.fingerprint = 'changed';
+        const grant = granted.conversationGrants[0];
+        if (!grant) {
+            throw new Error('Expected a conversation grant.');
+        }
+        grant.fingerprint = 'changed';
         expect(resolveToolPolicy('mcp_github_create_issue', granted)).toBe('ask');
     });
 
@@ -84,6 +88,10 @@ describe('tool access policy', () => {
                 policy: 'ask',
             },
         ];
+        const descriptor = descriptors[0];
+        if (!descriptor) {
+            throw new Error('Expected a descriptor.');
+        }
 
         expect(
             syncConnectedToolPolicies(descriptors, [
@@ -94,7 +102,7 @@ describe('tool access policy', () => {
                 },
             ]),
         ).toBe(true);
-        expect(descriptors[0]!.policy).toBe('auto');
+        expect(descriptor.policy).toBe('auto');
 
         expect(
             syncConnectedToolPolicies(descriptors, [
@@ -105,7 +113,7 @@ describe('tool access policy', () => {
                 },
             ]),
         ).toBe(true);
-        expect(descriptors[0]!.policy).toBe('ask');
+        expect(descriptor.policy).toBe('ask');
     });
 
     it('reconciles manifest entries with newer settings policies', () => {
@@ -118,6 +126,10 @@ describe('tool access policy', () => {
                 policy: 'ask',
             },
         ];
+        const entry = manifest[0];
+        if (!entry) {
+            throw new Error('Expected a manifest entry.');
+        }
 
         reconcileManifestPolicies(manifest, [
             {
@@ -126,6 +138,6 @@ describe('tool access policy', () => {
                 policy: 'auto',
             },
         ]);
-        expect(manifest[0]!.policy).toBe('auto');
+        expect(entry.policy).toBe('auto');
     });
 });

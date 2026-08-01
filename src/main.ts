@@ -67,9 +67,9 @@ export default class LavaPlugin extends Plugin {
     }
 
     onunload() {
-        this.authStore?.dispose();
-        void this.mcpConnections?.closeAll();
-        void this.chatSessions?.flushIndex();
+        this.authStore.dispose();
+        void this.mcpConnections.closeAll();
+        void this.chatSessions.flushIndex();
     }
 
     async activateChatView(): Promise<void> {

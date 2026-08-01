@@ -1,6 +1,7 @@
 import { Modal, Notice, Setting, setIcon, type App } from 'obsidian';
 import type LavaPlugin from '../main';
 import type { McpConnectionStatus, McpServerConfig, McpToolPolicy } from '../mcp/types';
+import { formatCount } from './format';
 
 export class McpServerModal extends Modal {
 	private readonly expandedHeaders = new Set<string>();
@@ -80,7 +81,7 @@ export class McpServerModal extends Modal {
 						const tools =
 							await this.lavaPlugin.mcpConnections.refreshServer(server.id);
 						this.expandedTools.add(server.id);
-						new Notice(`Connected. Discovered ${tools.length} tools.`);
+						new Notice(`Connected. Discovered ${String(tools.length)} tools.`);
 					} catch (error) {
 						new Notice(
 							error instanceof Error
@@ -96,7 +97,9 @@ export class McpServerModal extends Modal {
 		this.renderToolsSection(contentEl, server);
 
 		new Setting(contentEl).addButton((button) => {
-			button.setButtonText('Done').setCta().onClick(() => this.close());
+			button.setButtonText('Done').setCta().onClick(() => {
+				this.close();
+			});
 		});
 	}
 
@@ -109,14 +112,10 @@ export class McpServerModal extends Modal {
 		});
 		const summaryParts = [hostLabel(server.url)];
 		if (server.tools.length > 0) {
-			summaryParts.push(
-				`${server.tools.length} tool${server.tools.length === 1 ? '' : 's'}`,
-			);
+			summaryParts.push(formatCount(server.tools.length, 'tool'));
 		}
 		if (server.headers.length > 0) {
-			summaryParts.push(
-				`${server.headers.length} header${server.headers.length === 1 ? '' : 's'}`,
-			);
+			summaryParts.push(formatCount(server.headers.length, 'header'));
 		}
 		row.createSpan({
 			cls: 'lava-mcp-modal__status-summary',
@@ -132,7 +131,7 @@ export class McpServerModal extends Modal {
 			'Headers',
 			server.headers.length === 0
 				? 'Optional request headers'
-				: `${server.headers.length} configured`,
+				: `${String(server.headers.length)} configured`,
 			expanded,
 			() => {
 				if (expanded) this.expandedHeaders.delete(server.id);
@@ -146,7 +145,7 @@ export class McpServerModal extends Modal {
 		const content = section.createDiv({ cls: 'lava-mcp-section__content' });
 		content.createEl('p', {
 			cls: 'lava-mcp-section__hint setting-item-description',
-			text: 'Sent with every request. Add an Authorization header if the server requires one.',
+			text: 'Sent with every request. Add an authorization header if the server requires one.',
 		});
 
 		if (server.headers.length === 0) {
@@ -217,7 +216,7 @@ export class McpServerModal extends Modal {
 		if (server.tools.length === 0) {
 			parent.createEl('p', {
 				cls: 'lava-mcp-tools-empty setting-item-description',
-				text: 'No tools discovered yet. Run Test and refresh after the URL and headers are set.',
+				text: 'No tools discovered yet. Run test and refresh after the URL and headers are set.',
 			});
 			return;
 		}
@@ -227,7 +226,7 @@ export class McpServerModal extends Modal {
 		renderSectionToggle(
 			section,
 			'Tools',
-			`${server.tools.length} discovered`,
+			`${String(server.tools.length)} discovered`,
 			expanded,
 			() => {
 				if (expanded) this.expandedTools.delete(server.id);

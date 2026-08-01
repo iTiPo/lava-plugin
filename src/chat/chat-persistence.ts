@@ -23,7 +23,11 @@ export class ChatPersistence {
     private readonly nextSequences = new Map<string, number>();
 
     constructor(private readonly plugin: Plugin) {
-        this.basePath = normalizePath(`${plugin.manifest.dir}/chats`);
+        const pluginDir = plugin.manifest.dir;
+        if (!pluginDir) {
+            throw new Error('Plugin manifest directory is unavailable.');
+        }
+        this.basePath = normalizePath(`${pluginDir}/chats`);
     }
 
     getBasePath(): string {

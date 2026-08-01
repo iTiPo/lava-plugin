@@ -28,7 +28,7 @@ export async function nodeFetch(
 ): Promise<Response> {
 	const request = new Request(input, init);
 	const signal = init.signal ?? request.signal;
-	if (signal.aborted) throw abortError();
+	throwIfAborted(signal);
 
 	const url = new URL(request.url);
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
@@ -36,7 +36,9 @@ export async function nodeFetch(
 	}
 
 	const body = await readRequestBody(request);
-	if (signal.aborted) throw abortError();
+	// AbortSignal can flip during the await; re-check via a helper so control-flow
+	// analysis does not treat `signal.aborted` as permanently false.
+	throwIfAborted(signal);
 
 	const headers = headersToNode(request.headers);
 	if (body && !hasHeader(headers, 'content-length')) {
@@ -97,7 +99,9 @@ export async function nodeFetch(
 		};
 
 		signal.addEventListener('abort', onAbort, { once: true });
-		req.on('error', (error) => fail(error));
+		req.on('error', (error) => {
+			fail(error);
+		});
 
 		if (body) req.write(body);
 		req.end();
@@ -177,6 +181,10 @@ function hasHeader(headers: OutgoingHttpHeaders, name: string): boolean {
 
 function isRedirectStatus(status: number): boolean {
 	return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+	if (signal.aborted) throw abortError();
 }
 
 function abortError(): DOMException {

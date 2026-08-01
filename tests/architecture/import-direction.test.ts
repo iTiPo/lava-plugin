@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const SRC_ROOT = path.resolve(import.meta.dirname, '../../src');
 
 /** Relative import edges that must not exist (from → to). */
-const FORBIDDEN_EDGES: Array<{ from: string; to: string; reason: string }> = [
+const FORBIDDEN_EDGES: { from: string; to: string; reason: string }[] = [
 	{
 		from: 'ai',
 		to: 'chat',

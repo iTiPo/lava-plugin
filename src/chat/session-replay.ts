@@ -137,33 +137,36 @@ export function emptySessionSnapshot(): SessionSnapshot {
     };
 }
 
-function isChatRecord(value: Partial<ChatRecord>): value is ChatRecord {
+function isChatRecord(value: object): value is ChatRecord {
+    // Persisted JSON is untrusted: keep `kind` as a plain string so unknown
+    // kinds fall through to `return false` instead of being narrowed away.
+    const record = value as Record<string, unknown>;
     if (
-        typeof value.seq !== 'number' ||
-        typeof value.recordedAt !== 'number' ||
-        typeof value.kind !== 'string'
+        typeof record.seq !== 'number' ||
+        typeof record.recordedAt !== 'number' ||
+        typeof record.kind !== 'string'
     ) {
         return false;
     }
 
-    if (value.kind === 'message') {
-        return isLegacyMessage(value.message);
+    if (record.kind === 'message') {
+        return isLegacyMessage(record.message);
     }
-    if (value.kind === 'run') {
+    if (record.kind === 'run') {
         return (
-            typeof value.runId === 'string' &&
-            typeof value.triggerMessageId === 'string' &&
-            (value.mode === 'chat' || value.mode === 'agent') &&
-            typeof value.status === 'string'
+            typeof record.runId === 'string' &&
+            typeof record.triggerMessageId === 'string' &&
+            (record.mode === 'chat' || record.mode === 'agent') &&
+            typeof record.status === 'string'
         );
     }
-    if (value.kind === 'tool') {
+    if (record.kind === 'tool') {
         return (
-            typeof value.operationId === 'string' &&
-            typeof value.runId === 'string' &&
-            typeof value.toolCallId === 'string' &&
-            typeof value.toolName === 'string' &&
-            typeof value.status === 'string'
+            typeof record.operationId === 'string' &&
+            typeof record.runId === 'string' &&
+            typeof record.toolCallId === 'string' &&
+            typeof record.toolName === 'string' &&
+            typeof record.status === 'string'
         );
     }
     return false;

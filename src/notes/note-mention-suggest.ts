@@ -90,7 +90,7 @@ export class NoteMentionSuggest extends AbstractInputSuggest<TFile> {
     private getMentionQuery(): string | null {
         const cursor = this.textarea.selectionStart;
         const before = this.textarea.value.slice(0, cursor);
-        const match = before.match(/@([^\s@]*)$/);
+        const match = /@([^\s@]*)$/.exec(before);
         if (!match) {
             return null;
         }

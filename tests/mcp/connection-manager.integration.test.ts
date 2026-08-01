@@ -9,7 +9,7 @@ describe('MCP connection manager', () => {
         const server = createServer((request, response) => {
             let raw = '';
             request.setEncoding('utf8');
-            request.on('data', (chunk) => {
+            request.on('data', (chunk: string) => {
                 raw += chunk;
             });
             request.on('end', () => {
@@ -65,7 +65,7 @@ describe('MCP connection manager', () => {
         const config: McpServerConfig = {
             id: 'fixture',
             name: 'Fixture',
-            url: `http://127.0.0.1:${address.port}`,
+            url: `http://127.0.0.1:${String(address.port)}`,
             enabled: true,
             headers: [
                 { id: 'h1', name: 'X-Test-Token', value: 'fixture-secret' },
@@ -80,15 +80,22 @@ describe('MCP connection manager', () => {
         try {
             const connection = await manager.getAgentTools();
             expect(connection.descriptors).toHaveLength(1);
-            expect(connection.descriptors[0]).toMatchObject({
+            const descriptor = connection.descriptors[0];
+            expect(descriptor).toMatchObject({
                 serverId: 'fixture',
                 toolName: 'echo',
                 policy: 'ask',
             });
+            if (!descriptor) {
+                throw new Error('Expected a discovered tool descriptor.');
+            }
 
-            const tool = connection.tools[connection.descriptors[0]!.id];
+            const tool = connection.tools[descriptor.id];
             expect(tool?.execute).toBeTypeOf('function');
-            const output: unknown = await tool!.execute!(
+            if (!tool?.execute) {
+                throw new Error('Expected discovered tool to expose execute().');
+            }
+            const output: unknown = await tool.execute(
                 { message: 'hello' },
                 {
                     toolCallId: 'call-1',
@@ -102,9 +109,12 @@ describe('MCP connection manager', () => {
             });
         } finally {
             await manager.closeAll();
-            await new Promise<void>((resolve, reject) =>
-                server.close((error) => (error ? reject(error) : resolve())),
-            );
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => {
+                    if (error) reject(error);
+                    else resolve();
+                });
+            });
         }
     });
 });
@@ -134,7 +144,11 @@ class FakeSettings {
     }
 
     getServer(): McpServerConfig {
-        return this.listServers()[0]!;
+        const server = this.listServers()[0];
+        if (!server) {
+            throw new Error('FakeSettings has no servers.');
+        }
+        return server;
     }
 
     async updateServer(

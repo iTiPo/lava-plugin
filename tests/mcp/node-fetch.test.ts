@@ -8,7 +8,7 @@ describe('nodeFetch', () => {
 		const server = createServer((request, response) => {
 			let raw = '';
 			request.setEncoding('utf8');
-			request.on('data', (chunk) => {
+			request.on('data', (chunk: string) => {
 				raw += chunk;
 			});
 			request.on('end', () => {
@@ -61,9 +61,13 @@ describe('nodeFetch', () => {
 				headers: { Accept: 'text/event-stream' },
 			});
 			expect(response.ok).toBe(true);
-			expect(response.body).not.toBeNull();
+			const body = response.body;
+			expect(body).not.toBeNull();
+			if (!body) {
+				throw new Error('Expected a streaming response body.');
+			}
 
-			const reader = response.body!.getReader();
+			const reader = body.getReader();
 			const decoder = new TextDecoder();
 			let received = '';
 			const firstChunkAt = Date.now();
@@ -128,12 +132,15 @@ async function listen(
 	if (!address || typeof address === 'string') {
 		throw new Error('Missing fixture port.');
 	}
-	return `http://127.0.0.1:${address.port}`;
+	return `http://127.0.0.1:${String(address.port)}`;
 }
 
 async function close(server: ReturnType<typeof createServer>): Promise<void> {
 	server.closeAllConnections();
-	await new Promise<void>((resolve, reject) =>
-		server.close((error) => (error ? reject(error) : resolve())),
-	);
+	await new Promise<void>((resolve, reject) => {
+		server.close((error) => {
+			if (error) reject(error);
+			else resolve();
+		});
+	});
 }

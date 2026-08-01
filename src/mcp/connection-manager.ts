@@ -142,7 +142,7 @@ export class McpConnectionManager {
     }
 
     private assembleAgentTools(
-        connections: Array<Connection | undefined>,
+        connections: (Connection | undefined)[],
     ): AgentMcpTools {
         this.syncPoliciesFromSettings();
         const tools: ToolSet = {};

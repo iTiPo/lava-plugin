@@ -17,5 +17,7 @@ export function stableStringify(value: unknown): string {
             .map((key) => `${JSON.stringify(key)}:${stableStringify(object[key])}`)
             .join(',')}}`;
     }
-    return JSON.stringify(value) ?? 'null';
+    // JSON.stringify(undefined) / functions yield undefined, not a string.
+    const json = JSON.stringify(value);
+    return typeof json === 'string' ? json : 'null';
 }

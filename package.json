@@ -1,6 +1,6 @@
 {
     "name": "getlava",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Getlava brings the ideas you have already captured into the conversation—so your vault becomes active material for better thinking.",
     "main": "main.js",
     "type": "module",

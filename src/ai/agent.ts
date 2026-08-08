@@ -64,6 +64,7 @@ export interface LavaAgentLifecycle {
 
 export interface CreateLavaAgentOptions {
     mode: ChatMode;
+    modelId: string;
     mcpTools?: ToolSet;
     descriptors?: ConnectedMcpTool[] | (() => ConnectedMcpTool[]);
     conversationGrants?: McpConversationGrant[] | (() => McpConversationGrant[]);
@@ -73,7 +74,7 @@ export interface CreateLavaAgentOptions {
 export function createLavaAgent(
     app: App,
     authStore: AuthStore,
-    options: CreateLavaAgentOptions = { mode: 'chat' },
+    options: CreateLavaAgentOptions,
 ) {
     const resolveDescriptors = (): ConnectedMcpTool[] =>
         typeof options.descriptors === 'function'
@@ -93,7 +94,7 @@ export function createLavaAgent(
     };
 
     return new ToolLoopAgent({
-        model: buildModel(authStore),
+        model: buildModel(authStore, options.modelId),
         instructions:
             options.mode === 'agent' ? AGENT_MODE_INSTRUCTIONS : LAVA_SYSTEM_INSTRUCTIONS,
         tools,

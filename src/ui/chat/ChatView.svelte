@@ -3,6 +3,7 @@
     import { Menu, setIcon, type App } from 'obsidian';
     import { getToolName, isDynamicToolUIPart, isToolUIPart } from 'ai';
     import type { LavaChat, LavaUIMessage } from '../../ai/chat-factory';
+    import type { CatalogModel } from '../../ai/models';
     import type { ChatMode } from '../../domain/chat';
     import type { ToolApprovalScope } from '../../mcp/types';
     import { getNoteMentions, type LavaMessageMetadata } from '../../ai/chat-types';
@@ -33,12 +34,15 @@
         isAuthenticated?: boolean;
         authRequired?: boolean;
         mode?: ChatMode;
+        modelId?: string;
+        models?: CatalogModel[];
         agentToolCounts?: { ask: number; auto: number };
         hasConfiguredMcpServers?: boolean;
         agentToolsStatus?: 'idle' | 'connecting' | 'ready' | 'error';
         agentToolsError?: string;
         agentWarning?: string;
         onModeChange?: (mode: ChatMode) => void;
+        onModelChange?: (modelId: string) => void;
         onRetryAgentTools?: () => void;
         onToolApproval?: (
             part: LavaUIMessage['parts'][number],
@@ -57,12 +61,15 @@
         isAuthenticated = false,
         authRequired = false,
         mode = 'chat',
+        modelId = '',
+        models = [],
         agentToolCounts = { ask: 0, auto: 0 },
         hasConfiguredMcpServers = false,
         agentToolsStatus = 'idle',
         agentToolsError = '',
         agentWarning = '',
         onModeChange,
+        onModelChange,
         onRetryAgentTools,
         onToolApproval,
         onOpenAuth,
@@ -70,6 +77,23 @@
         onBeforeRetry,
         onUserMessageSent,
     }: Props = $props();
+
+    const selectedModelName = $derived(
+        models.find((model) => model.id === modelId)?.name ?? modelId,
+    );
+
+    function openModelMenu(event: MouseEvent): void {
+        if (models.length === 0) return;
+        const menu = new Menu();
+        for (const model of models) {
+            menu.addItem((item) => {
+                item.setTitle(model.name)
+                    .setChecked(model.id === modelId)
+                    .onClick(() => onModelChange?.(model.id));
+            });
+        }
+        menu.showAtMouseEvent(event);
+    }
 
     let input = $state('');
     let messagesEl: HTMLDivElement | undefined = $state();
@@ -765,6 +789,22 @@
                     rows="2"
                 ></textarea>
                 <div class="lava-chat__mode-actions">
+                    {#if models.length > 0 && selectedModelName}
+                        <button
+                            type="button"
+                            class="lava-chat__model-select"
+                            aria-label="Model"
+                            aria-haspopup="menu"
+                            onclick={openModelMenu}
+                        >
+                            <span class="lava-chat__model-select-label">{selectedModelName}</span>
+                            <span
+                                class="lava-chat__model-select-chevron"
+                                {@attach chevronDownIcon}
+                                aria-hidden="true"
+                            ></span>
+                        </button>
+                    {/if}
                     <div
                         class="lava-chat__mode-switch"
                         role="radiogroup"

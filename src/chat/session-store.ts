@@ -1,4 +1,5 @@
 import type { LavaChat, LavaUIMessage } from '../ai/chat-types';
+import { FALLBACK_DEFAULT_MODEL_ID } from '../ai/models';
 import { generateId } from 'ai';
 import type { ChatMode } from '../domain/chat';
 import type { McpConversationGrant, ToolAuthorization } from '../mcp/types';
@@ -125,7 +126,7 @@ export class ChatSessionStore {
         return pending;
     }
 
-    createSession(): ChatSession {
+    createSession(modelId: string = FALLBACK_DEFAULT_MODEL_ID): ChatSession {
         const now = Date.now();
         const session: ChatSession = {
             id: generateId(),
@@ -134,8 +135,9 @@ export class ChatSessionStore {
             createdAt: now,
             updatedAt: now,
             mode: 'chat',
+            modelId,
             toolGrants: [],
-            storageVersion: 2,
+            storageVersion: 3,
             messagesLoaded: true,
             persisted: false,
             snapshot: undefined,
@@ -267,6 +269,15 @@ export class ChatSessionStore {
         this.notify();
     }
 
+    async setModel(sessionId: string, modelId: string): Promise<void> {
+        const session = this.getSession(sessionId);
+        if (!session || session.modelId === modelId) return;
+        session.modelId = modelId;
+        session.updatedAt = Date.now();
+        if (session.persisted) await this.flushIndex();
+        this.notify();
+    }
+
     async setConversationGrant(
         sessionId: string,
         grant: McpConversationGrant,
@@ -369,6 +380,7 @@ export class ChatSessionStore {
             createdAt: session.createdAt,
             updatedAt: session.updatedAt,
             mode: session.mode,
+            modelId: session.modelId,
             toolGrants: session.toolGrants,
             storageVersion: session.storageVersion,
         };

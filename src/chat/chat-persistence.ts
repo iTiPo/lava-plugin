@@ -1,4 +1,5 @@
 import { normalizePath, type Plugin } from 'obsidian';
+import { FALLBACK_DEFAULT_MODEL_ID } from '../ai/models';
 import {
     CHAT_INDEX_VERSION,
     createEmptyChatIndex,
@@ -256,14 +257,20 @@ function isValidSessionMeta(value: unknown): value is ChatSessionMeta {
 }
 
 function normalizeSessionMeta(meta: ChatSessionMeta): ChatSessionMeta {
+    const modelId =
+        typeof meta.modelId === 'string' && meta.modelId.trim().length > 0
+            ? meta.modelId
+            : FALLBACK_DEFAULT_MODEL_ID;
     return {
         id: meta.id,
         title: meta.title,
         createdAt: meta.createdAt,
         updatedAt: meta.updatedAt,
         mode: meta.mode === 'agent' ? 'agent' : 'chat',
+        modelId,
         toolGrants: normalizeToolGrants(meta.toolGrants),
-        storageVersion: meta.storageVersion === 2 ? 2 : 1,
+        storageVersion:
+            meta.storageVersion === 3 ? 3 : meta.storageVersion === 2 ? 2 : 1,
     };
 }
 

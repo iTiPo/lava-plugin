@@ -1,27 +1,36 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
-    import { Notice, Platform, type App } from 'obsidian';
+    import { Notice, Platform, type App, type Plugin } from 'obsidian';
     import { getToolName, isToolUIPart } from 'ai';
     import { createChat, type LavaChat, type LavaUIMessage } from '../../ai/chat-factory';
+    import {
+        FALLBACK_DEFAULT_MODEL_ID,
+        fetchModels,
+        type CatalogModel,
+    } from '../../ai/models';
     import { isAuthApiError } from '../../auth/auth-errors';
     import type { AuthStore } from '../../auth/auth-store';
     import type { ChatSession } from '../../chat/session-types';
     import type { ChatSessionStore } from '../../chat/session-store';
+    import type { LavaConfig } from '../../config';
     import type { ChatMode } from '../../domain/chat';
     import type { AgentMcpTools, McpConnectionManager } from '../../mcp/connection-manager';
     import { countToolPolicies } from '../../mcp/approval-policy';
     import type { McpSettingsStore } from '../../mcp/settings-store';
     import type { ConnectedMcpTool, ToolApprovalScope } from '../../mcp/types';
+    import { loadPluginData, updatePluginData } from '../../plugin-data';
     import ChatThreadHeader from './ChatThreadHeader.svelte';
     import ChatThreadList from './ChatThreadList.svelte';
     import ChatView from './ChatView.svelte';
 
     interface Props {
         app: App;
+        plugin: Plugin;
         sessionStore: ChatSessionStore;
         authStore: AuthStore;
         mcpSettings: McpSettingsStore;
         mcpConnections: McpConnectionManager;
+        config: LavaConfig;
         showProfileIcon?: boolean;
         onProfileClick?: () => void;
         onOpenAuth?: () => void;
@@ -29,10 +38,12 @@
 
     let {
         app,
+        plugin,
         sessionStore,
         authStore,
         mcpSettings,
         mcpConnections,
+        config,
         showProfileIcon = false,
         onProfileClick,
         onOpenAuth,
@@ -56,6 +67,14 @@
     let recoveryWarning = $state('');
     let settingsRefreshTimer: number | undefined;
     const pendingSettingsRefresh = new Set<string>();
+    let catalogModels = $state<CatalogModel[]>([]);
+    let preferredModelId = $state(FALLBACK_DEFAULT_MODEL_ID);
+    let modelsLoaded = $state(false);
+
+    const activeModelId = $derived(
+        sessions.find((session) => session.id === activeSessionId)?.modelId ??
+            preferredModelId,
+    );
 
     $effect.pre(() => {
         isAuthenticated = authStore.isAuthenticated();
@@ -78,6 +97,7 @@
             messages: session.messages,
             agent: {
                 mode: session.mode,
+                modelId: session.modelId || preferredModelId,
                 mcpTools: mcp.tools,
                 descriptors: () => mcpConnections.listAgentDescriptors(),
                 conversationGrants: () => session.toolGrants,
@@ -316,6 +336,69 @@
         refreshSessions();
     }
 
+    async function changeModel(modelId: string): Promise<void> {
+        const session = sessionStore.getActiveSession();
+        if (session.modelId === modelId) return;
+        if ((activeChat && isChatBusy(activeChat)) || chatHasPendingApproval()) {
+            new Notice('Finish or deny the current tool request before changing model.');
+            return;
+        }
+        if (activeChat) sessionStore.syncFromChat(activeChat);
+        await sessionStore.setModel(session.id, modelId);
+        preferredModelId = modelId;
+        await updatePluginData(plugin, (current) => ({
+            ...current,
+            preferences: {
+                ...current.preferences,
+                defaultModelId: modelId,
+            },
+        }));
+        await initializeChat(session);
+        refreshSessions();
+    }
+
+    async function loadModelCatalog(): Promise<void> {
+        if (!authStore.isAuthenticated()) {
+            modelsLoaded = false;
+            catalogModels = [];
+            return;
+        }
+
+        const data = await loadPluginData(plugin);
+        const storedDefault = data.preferences?.defaultModelId;
+        if (typeof storedDefault === 'string' && storedDefault.trim()) {
+            preferredModelId = storedDefault;
+        }
+
+        const result = await fetchModels(authStore, config);
+        if (!result.ok) {
+            modelsLoaded = false;
+            catalogModels = [];
+            if (!storedDefault) {
+                preferredModelId = FALLBACK_DEFAULT_MODEL_ID;
+            }
+            return;
+        }
+
+        catalogModels = result.models;
+        modelsLoaded = true;
+
+        const knownIds = new Set(result.models.map((model) => model.id));
+        if (!knownIds.has(preferredModelId)) {
+            preferredModelId = result.defaultModelId;
+        }
+
+        const session = sessionStore.getActiveSession();
+        if (!knownIds.has(session.modelId)) {
+            await sessionStore.setModel(session.id, preferredModelId);
+            if (activeChat) {
+                sessionStore.syncFromChat(activeChat);
+                await initializeChat(session);
+            }
+            refreshSessions();
+        }
+    }
+
     function scheduleMcpRefresh(session: ChatSession): void {
         if (settingsRefreshTimer !== undefined) {
             window.clearTimeout(settingsRefreshTimer);
@@ -424,7 +507,7 @@
 
     async function createNewSession() {
         await prepareSwitch();
-        const session = sessionStore.createSession();
+        const session = sessionStore.createSession(preferredModelId);
         activeSessionId = session.id;
         activeChat = undefined;
         await initializeChat(session);
@@ -488,6 +571,7 @@
         if (sessionStore.takePendingNewChat()) {
             void createNewSession();
         }
+        void loadModelCatalog();
         const unsubscribeSessions = sessionStore.subscribe(() => {
             refreshSessions();
             if (sessionStore.takePendingNewChat()) {
@@ -498,6 +582,10 @@
             isAuthenticated = authStore.isAuthenticated();
             if (isAuthenticated) {
                 authRequired = false;
+                void loadModelCatalog();
+            } else {
+                modelsLoaded = false;
+                catalogModels = [];
             }
         });
         const unsubscribeMcpSettings = mcpSettings.subscribe((change) => {
@@ -566,6 +654,8 @@
                     {app}
                     chat={activeChat}
                     mode={activeMode}
+                    modelId={activeModelId}
+                    models={modelsLoaded ? catalogModels : []}
                     agentToolCounts={toolCounts}
                     hasConfiguredMcpServers={mcpSettings
                         .listServers()
@@ -574,6 +664,7 @@
                     {agentToolsError}
                     agentWarning={recoveryWarning}
                     onModeChange={(mode) => void changeMode(mode)}
+                    onModelChange={(modelId) => void changeModel(modelId)}
                     onRetryAgentTools={retryAgentTools}
                     onToolApproval={(part, approved, scope) =>
                         handleToolApproval(part, approved, scope)}

@@ -8,7 +8,7 @@ const httpFetch = window.fetch.bind(window);
 /**
  * Build a LanguageModel for the configured OpenAI-compatible endpoint.
  */
-export function buildModel(authStore: AuthStore): LanguageModelV4 {
+export function buildModel(authStore: AuthStore, modelId: string): LanguageModelV4 {
     const { apiBaseUrl } = loadLavaConfig();
     const provider = createOpenAICompatible({
         name: 'Getlava API Inference',
@@ -23,5 +23,5 @@ export function buildModel(authStore: AuthStore): LanguageModelV4 {
         },
     });
 
-    return provider('lava-chat');
+    return provider(modelId);
 }

@@ -3,7 +3,7 @@ import type { ChatMode } from '../domain/chat';
 import type { McpConversationGrant } from '../mcp/types';
 import type { SessionSnapshot } from './persistence-types';
 
-export const CHAT_INDEX_VERSION = 2;
+export const CHAT_INDEX_VERSION = 3;
 
 export interface ChatSessionMeta {
 	id: string;
@@ -11,8 +11,9 @@ export interface ChatSessionMeta {
 	createdAt: number;
 	updatedAt: number;
 	mode: ChatMode;
+	modelId: string;
 	toolGrants: McpConversationGrant[];
-	storageVersion: 1 | 2;
+	storageVersion: 1 | 2 | 3;
 }
 
 export interface ChatIndex {

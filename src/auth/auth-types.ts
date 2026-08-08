@@ -16,9 +16,14 @@ export interface PersistedAuthData {
     email?: string;
 }
 
+export interface PluginPreferences {
+    defaultModelId?: string;
+}
+
 export interface LavaPluginData {
     auth?: PersistedAuthData;
     mcp?: McpPluginData;
+    preferences?: PluginPreferences;
 }
 
 export interface MagicLinkParams {

@@ -663,6 +663,44 @@ If your plugin does not need CSS, delete this file.
     min-width: 0;
 }
 
+.lava-chat__model-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    max-width: 11rem;
+    margin: 0;
+    padding: 0.1rem 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-medium);
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.lava-chat__model-select:hover {
+    color: var(--text-normal);
+}
+
+.lava-chat__model-select-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lava-chat__model-select-chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    opacity: 0.75;
+}
+
+.lava-chat__model-select-chevron svg {
+    width: 0.85em;
+    height: 0.85em;
+}
+
 .lava-chat__mode-switch {
     display: inline-flex;
     align-items: center;

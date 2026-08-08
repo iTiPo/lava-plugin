@@ -17,7 +17,7 @@ export interface CreateChatOptions {
     messages?: LavaUIMessage[];
     onFinish?: ChatInit<LavaUIMessage>['onFinish'];
     onError?: ChatInit<LavaUIMessage>['onError'];
-    agent?: CreateLavaAgentOptions;
+    agent: CreateLavaAgentOptions;
     onApprovalStateChange?: (
         messages: LavaUIMessage[],
         willContinue: boolean,
@@ -30,24 +30,24 @@ export interface CreateChatOptions {
 export function createChat(
     app: App,
     authStore: AuthStore,
-    options?: CreateChatOptions,
+    options: CreateChatOptions,
 ): LavaChat {
-    const agent = createLavaAgent(app, authStore, options?.agent);
+    const agent = createLavaAgent(app, authStore, options.agent);
     return new Chat<LavaUIMessage>({
-        id: options?.id,
-        messages: options?.messages ?? [],
+        id: options.id,
+        messages: options.messages ?? [],
         transport: new DirectChatTransport({
             agent,
             // In-process UI: show real tool error content instead of the SDK default scrub.
             onError: formatToolErrorMessage,
         }),
-        onFinish: options?.onFinish,
-        onError: options?.onError,
+        onFinish: options.onFinish,
+        onError: options.onError,
         sendAutomaticallyWhen: async ({ messages }) => {
             const willContinue = lastAssistantMessageIsCompleteWithApprovalResponses({
                 messages,
             });
-            await options?.onApprovalStateChange?.(messages, willContinue);
+            await options.onApprovalStateChange?.(messages, willContinue);
             return willContinue;
         },
     });

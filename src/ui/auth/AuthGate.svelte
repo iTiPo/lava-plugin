@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import type { App } from 'obsidian';
+    import type { App, Plugin } from 'obsidian';
     import type { AuthStore } from '../../auth/auth-store';
     import type { AuthRoute } from '../../auth/auth-types';
     import type { ChatSessionStore } from '../../chat/session-store';
@@ -14,6 +14,7 @@
 
     interface Props {
         app: App;
+        plugin: Plugin;
         sessionStore: ChatSessionStore;
         authStore: AuthStore;
         mcpSettings: McpSettingsStore;
@@ -24,6 +25,7 @@
 
     let {
         app,
+        plugin,
         sessionStore,
         authStore,
         mcpSettings,
@@ -160,10 +162,12 @@
     {:else}
         <ChatShell
             {app}
+            {plugin}
             {sessionStore}
             {authStore}
             {mcpSettings}
             {mcpConnections}
+            {config}
             {showProfileIcon}
             onProfileClick={handleProfileClick}
             onOpenAuth={openAuth}
